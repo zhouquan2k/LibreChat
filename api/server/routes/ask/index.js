@@ -4,6 +4,7 @@ const custom = require('./custom');
 const google = require('./google');
 const anthropic = require('./anthropic');
 const gptPlugins = require('./gptPlugins');
+const dify = require('./dify');
 const { isEnabled } = require('~/server/utils');
 const { EModelEndpoint } = require('librechat-data-provider');
 const {
@@ -43,5 +44,6 @@ router.use(`/${EModelEndpoint.gptPlugins}`, gptPlugins);
 router.use(`/${EModelEndpoint.anthropic}`, anthropic);
 router.use(`/${EModelEndpoint.google}`, google);
 router.use(`/${EModelEndpoint.custom}`, custom);
+router.use(`/${EModelEndpoint.dify}`, dify);
 
 module.exports = router;

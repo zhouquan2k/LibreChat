@@ -3,20 +3,23 @@ services:
     build:
       context: ..
       dockerfile: .devcontainer/Dockerfile
+      args:
+        # 更新到宿主机 docker GID
+        DOCKER_GID: 999  # 请根据宿主机上的docker组GID调整这个值
     # restart: always
     links:
       - mongodb
       - meilisearch
-    # ports:
-    #   - 3080:3080               # Change it to 9000:3080 to use nginx
+    ports:
+      - 3080:3080               # Change it to 9000:3080 to use nginx
     extra_hosts: # if you are running APIs on docker you need access to, you will need to uncomment this line and next
     - "host.docker.internal:host-gateway"
 
     volumes:
       # This is where VS Code should expect to find your project's source code and the value of "workspaceFolder" in .devcontainer/devcontainer.json
       - ..:/workspaces:cached
-      # Uncomment the next line to use Docker from inside the container. See https://aka.ms/vscode-remote/samples/docker-from-docker-compose for details.
-      # - /var/run/docker.sock:/var/run/docker.sock 
+      # 挂载Docker套接字，用于Docker-outside-of-Docker
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - HOST=0.0.0.0
       - MONGO_URI=mongodb://mongodb:27017/LibreChat
@@ -40,8 +43,8 @@ services:
     container_name: chat-mongodb
     expose:
       - 27017
-    # ports:
-    #   - 27018:27017
+    ports:
+      - 27017:27017
     image: mongo
     # restart: always
     volumes:
@@ -54,8 +57,8 @@ services:
     expose:
       - 7700
     # Uncomment this to access meilisearch from outside docker
-    # ports: 
-    #   - 7700:7700 # if exposing these ports, make sure your master key is not the default value
+    ports: 
+      - 7700:7700 # if exposing these ports, make sure your master key is not the default value
     environment:
       - MEILI_NO_ANALYTICS=true
       - MEILI_MASTER_KEY=5c71cf56d672d009e36070b5bc5e47b743535ae55c818ae3b735bb6ebfb4ba63

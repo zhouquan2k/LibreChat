@@ -44,6 +44,7 @@ const endpointSchemas: Record<EModelEndpoint, EndpointSchema> = {
   [EModelEndpoint.azureAssistants]: assistantSchema,
   [EModelEndpoint.agents]: compactAgentsSchema,
   [EModelEndpoint.bedrock]: bedrockInputSchema,
+  [EModelEndpoint.dify]: openAISchema,
 };
 
 // const schemaCreators: Record<EModelEndpoint, (customSchema: DefaultSchemaValues) => EndpointSchema> = {
@@ -63,6 +64,7 @@ export function getEnabledEndpoints() {
     EModelEndpoint.gptPlugins,
     EModelEndpoint.anthropic,
     EModelEndpoint.bedrock,
+    EModelEndpoint.dify,
   ];
 
   const endpointsEnv = process.env.ENDPOINTS ?? '';
@@ -325,6 +327,7 @@ const compactEndpointSchemas: Record<string, CompactEndpointSchema> = {
   [EModelEndpoint.anthropic]: anthropicSchema,
   [EModelEndpoint.chatGPTBrowser]: compactChatGPTSchema,
   [EModelEndpoint.gptPlugins]: compactPluginsSchema,
+  [EModelEndpoint.dify]: openAISchema,
 };
 
 export const parseCompactConvo = ({

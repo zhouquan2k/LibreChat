@@ -23,6 +23,7 @@ export enum EModelEndpoint {
   agents = 'agents',
   custom = 'custom',
   bedrock = 'bedrock',
+  dify = 'dify',
   /** @deprecated */
   chatGPTBrowser = 'chatGPTBrowser',
   /** @deprecated */
@@ -37,6 +38,7 @@ export const paramEndpoints = new Set<EModelEndpoint | string>([
   EModelEndpoint.anthropic,
   EModelEndpoint.custom,
   EModelEndpoint.google,
+  EModelEndpoint.dify,
 ]);
 
 export enum BedrockProviders {

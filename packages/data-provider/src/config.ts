@@ -664,6 +664,7 @@ export const defaultEndpoints: EModelEndpoint[] = [
   EModelEndpoint.anthropic,
   EModelEndpoint.custom,
   EModelEndpoint.bedrock,
+  EModelEndpoint.dify,
 ];
 
 export const alternateName = {
@@ -678,6 +679,7 @@ export const alternateName = {
   [EModelEndpoint.anthropic]: 'Anthropic',
   [EModelEndpoint.custom]: 'Custom',
   [EModelEndpoint.bedrock]: 'AWS Bedrock',
+  [EModelEndpoint.dify]: 'Dify',
   [KnownEndpoints.ollama]: 'Ollama',
   [KnownEndpoints.deepseek]: 'DeepSeek',
   [KnownEndpoints.xai]: 'xAI',
@@ -786,6 +788,7 @@ export const defaultModels = {
     'gpt-3.5-turbo-instruct',
   ],
   [EModelEndpoint.bedrock]: bedrockModels,
+  [EModelEndpoint.dify]: ['default-model'],
 };
 
 const fitlerAssistantModels = (str: string) => {
@@ -805,6 +808,7 @@ export const initialModelsConfig: TModelsConfig = {
   [EModelEndpoint.google]: defaultModels[EModelEndpoint.google],
   [EModelEndpoint.anthropic]: defaultModels[EModelEndpoint.anthropic],
   [EModelEndpoint.bedrock]: defaultModels[EModelEndpoint.bedrock],
+  [EModelEndpoint.dify]: defaultModels[EModelEndpoint.dify],
 };
 
 export const EndpointURLs: { [key in EModelEndpoint]: string } = {
@@ -819,6 +823,7 @@ export const EndpointURLs: { [key in EModelEndpoint]: string } = {
   [EModelEndpoint.assistants]: '/api/assistants/v2/chat',
   [EModelEndpoint.agents]: `/api/${EModelEndpoint.agents}/chat`,
   [EModelEndpoint.bedrock]: `/api/${EModelEndpoint.bedrock}/chat`,
+  [EModelEndpoint.dify]: `/api/ask/${EModelEndpoint.dify}`,
 };
 
 export const modularEndpoints = new Set<EModelEndpoint | string>([
@@ -830,6 +835,7 @@ export const modularEndpoints = new Set<EModelEndpoint | string>([
   EModelEndpoint.custom,
   EModelEndpoint.agents,
   EModelEndpoint.bedrock,
+  EModelEndpoint.dify,
 ]);
 
 export const supportsBalanceCheck = {
@@ -842,6 +848,7 @@ export const supportsBalanceCheck = {
   [EModelEndpoint.azureAssistants]: true,
   [EModelEndpoint.azureOpenAI]: true,
   [EModelEndpoint.bedrock]: true,
+  [EModelEndpoint.dify]: true,
 };
 
 export const visionModels = [

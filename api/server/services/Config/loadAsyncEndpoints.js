@@ -2,7 +2,7 @@ const { EModelEndpoint } = require('librechat-data-provider');
 const { isUserProvided } = require('~/server/utils');
 const { config } = require('./EndpointService');
 
-const { openAIApiKey, azureOpenAIApiKey, useAzurePlugins, userProvidedOpenAI, googleKey } = config;
+const { openAIApiKey, azureOpenAIApiKey, useAzurePlugins, userProvidedOpenAI, googleKey, difyApiKey, difyBaseUrl } = config;
 
 /**
  * Load async endpoints and return a configuration object
@@ -28,6 +28,14 @@ async function loadAsyncEndpoints(req) {
 
   const google = serviceKey || googleKey ? { userProvide: googleUserProvides } : false;
 
+  // 处理dify端点配置
+  const difyUserProvides = isUserProvided(difyApiKey);
+  const difyUserProvidesURL = isUserProvided(difyBaseUrl);
+  const dify = difyApiKey ? { 
+    userProvide: difyUserProvides,
+    userProvideURL: difyUserProvidesURL
+  } : false;
+  
   const useAzure = req.app.locals[EModelEndpoint.azureOpenAI]?.plugins;
   const gptPlugins =
     useAzure || openAIApiKey || azureOpenAIApiKey
@@ -42,7 +50,7 @@ async function loadAsyncEndpoints(req) {
       }
       : false;
 
-  return { google, gptPlugins };
+  return { google, gptPlugins, dify };
 }
 
 module.exports = loadAsyncEndpoints;

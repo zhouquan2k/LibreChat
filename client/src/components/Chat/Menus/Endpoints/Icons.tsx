@@ -15,6 +15,7 @@ import {
 } from '~/components/svg';
 import UnknownIcon from './UnknownIcon';
 import { cn } from '~/utils';
+import { DifyIcon } from '~/components/svg';
 
 const AssistantAvatar = ({
   className = '',
@@ -72,5 +73,6 @@ export const icons: IconsRecord = {
   [EModelEndpoint.azureAssistants]: AssistantAvatar,
   [EModelEndpoint.agents]: AgentAvatar,
   [EModelEndpoint.bedrock]: Bedrock,
+  ['dify']: DifyIcon,
   unknown: UnknownIcon,
 };

@@ -10,6 +10,7 @@ import {
   AnthropicIcon,
   BedrockIcon,
   Sparkles,
+  DifyIcon,
 } from '~/components/svg';
 import UnknownIcon from '~/components/Chat/Menus/Endpoints/UnknownIcon';
 import { IconProps } from '~/common';
@@ -53,6 +54,10 @@ const MinimalIcon: React.FC<IconProps> = (props) => {
     [EModelEndpoint.bedrock]: {
       icon: <BedrockIcon className="icon-xl text-text-primary" />,
       name: props.modelLabel ?? alternateName[EModelEndpoint.bedrock],
+    },
+    ['dify']: {
+      icon: <DifyIcon className="icon-md" />,
+      name: props.modelLabel ?? 'Dify',
     },
     default: {
       icon: <UnknownIcon iconURL={iconURL} endpoint={endpoint} className="icon-sm" context="nav" />,

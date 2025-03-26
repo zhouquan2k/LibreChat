@@ -325,6 +325,15 @@ const getBedrockModels = () => {
   return models;
 };
 
+const getDifyModels = () => {
+  let models = defaultModels[EModelEndpoint.dify] || [];
+  if (process.env.DIFY_MODELS) {
+    models = splitAndTrim(process.env.DIFY_MODELS);
+  }
+  
+  return models;
+};
+
 module.exports = {
   fetchModels,
   splitAndTrim,
@@ -333,4 +342,5 @@ module.exports = {
   getChatGPTBrowserModels,
   getAnthropicModels,
   getGoogleModels,
+  getDifyModels,
 };

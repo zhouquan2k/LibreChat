@@ -12,6 +12,36 @@
       },
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "调试 Dify 流式测试",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/api/test-dify-simple.js",
+      "args": ["stream"],
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "NODE_ENV": "development",
+        "DIFY_API_KEY": "app-TQixozS4DOBdeLiwohcOgktl",
+        "DIFY_BASE_URL": "http://192.168.1.227:4080/v1"
+      }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "调试 Dify 所有测试",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/api/test-dify-simple.js",
+      "args": ["all"],
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "NODE_ENV": "development",
+        "DIFY_API_KEY": "app-mwDv28xELLBnvcn3S8lzRPhQ",
+        "DIFY_BASE_URL": "http://192.168.1.227:4080/v1"
+      }
     }
   ]
 }

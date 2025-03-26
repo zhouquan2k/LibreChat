@@ -66,6 +66,13 @@ async function getEndpointsConfig(req) {
     };
   }
 
+  if (mergedConfig[EModelEndpoint.dify]) {
+    mergedConfig[EModelEndpoint.dify] = {
+      ...mergedConfig[EModelEndpoint.dify],
+      order: 6,
+    };
+  }
+
   const endpointsConfig = orderEndpointsConfig(mergedConfig);
 
   await cache.set(CacheKeys.ENDPOINT_CONFIG, endpointsConfig);

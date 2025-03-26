@@ -10,6 +10,8 @@ const {
   CHATGPT_TOKEN: chatGPTToken,
   PLUGINS_USE_AZURE,
   GOOGLE_KEY: googleKey,
+  DIFY_API_KEY: difyApiKey,
+  DIFY_BASE_URL: difyBaseUrl,
   OPENAI_REVERSE_PROXY,
   AZURE_OPENAI_BASEURL,
   ASSISTANTS_BASE_URL,
@@ -29,6 +31,7 @@ module.exports = {
     useAzurePlugins,
     userProvidedOpenAI,
     googleKey,
+    difyApiKey,
     [EModelEndpoint.anthropic]: generateConfig(anthropicApiKey),
     [EModelEndpoint.chatGPTBrowser]: generateConfig(chatGPTToken),
     [EModelEndpoint.openAI]: generateConfig(openAIApiKey, OPENAI_REVERSE_PROXY),
@@ -48,5 +51,6 @@ module.exports = {
     ),
     /* key will be part of separate config */
     [EModelEndpoint.agents]: generateConfig('true', undefined, EModelEndpoint.agents),
+    [EModelEndpoint.dify]: generateConfig(difyApiKey, difyBaseUrl, EModelEndpoint.dify),
   },
 };

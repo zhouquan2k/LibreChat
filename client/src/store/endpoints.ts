@@ -12,7 +12,9 @@ const defaultConfig: TEndpointsConfig = {
   [EModelEndpoint.gptPlugins]: null,
   [EModelEndpoint.google]: null,
   [EModelEndpoint.anthropic]: null,
+  [EModelEndpoint.bedrock]: null,
   [EModelEndpoint.custom]: null,
+  ['dify']: null,
 };
 
 const endpointsConfig = atom<TEndpointsConfig>({
