@@ -43,9 +43,20 @@ const Part = memo(
         />
       );
     } else if (part.type === ContentTypes.AGENT_UPDATE) {
+      const agentUpdate = part[ContentTypes.AGENT_UPDATE] as {
+        agentId: string;
+        status?: string;
+        nodeId?: string;
+        index: number;
+        runId: string;
+      };
       return (
         <>
-          <AgentUpdate currentAgentId={part[ContentTypes.AGENT_UPDATE]?.agentId} />
+          <AgentUpdate 
+            currentAgentId={agentUpdate.agentId}
+            status={agentUpdate.status} 
+            nodeId={agentUpdate.nodeId}
+          />
           {isLast && showCursor && (
             <Container>
               <EmptyText />

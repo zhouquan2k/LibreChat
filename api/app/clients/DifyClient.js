@@ -12,6 +12,7 @@ const TextStream = require('./TextStream');
 const { logger, sendEvent } = require('~/config');
 const Tokenizer = require('~/server/services/Tokenizer');
 const BaseClient = require('./BaseClient');
+const { v4 } = require('uuid');
 
 class DifyClient extends BaseClient {
   constructor(apiKey, options = {}) {
@@ -292,6 +293,32 @@ class DifyClient extends BaseClient {
     let fullText = '';
     let buffer = '';
     const onProgress = opts.onProgress;
+    
+    // 生成两个唯一的step ID，分别用于reasoning和message事件
+    const reasoningStepId = `step_reasoning_${Math.random().toString(36).substring(2, 15)}`;
+    const messageStepId = `step_message_${Math.random().toString(36).substring(2, 15)}`;
+    
+    // 生成运行ID
+    const runId = `run_${Math.random().toString(36).substring(2, 15)}`;
+    
+    // 生成消息ID
+    const messageId = `msg_${Math.random().toString(36).substring(2, 15)}`;
+    
+    // 用于跟踪思考内容的状态
+    let collectingThinking = false;
+    let hasSentThinkStart = false;
+    
+    // 跟踪当前的runstep类型
+    let currentRunStepType = null;
+    
+    // 切换runstep类型的辅助函数
+    const switchRunStepType = (newType) => {
+      if (currentRunStepType !== newType) {
+        const stepId = newType === 'reasoning' ? reasoningStepId : messageStepId;
+        this.sendRunStepEvent(stepId, runId, messageId, newType);
+        currentRunStepType = newType;
+      }
+    };
 
     try {
       const url = `${this.baseURL}/chat-messages`;
@@ -311,10 +338,13 @@ class DifyClient extends BaseClient {
         const errorText = await response.text();
         throw new Error(`Dify API错误 (${response.status}): ${errorText}`);
       }
+
+      this.sendRunStepEvent('step_id',runId, 'message_id', 'creating');
       
       // 处理SSE流
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+
       
       // 读取和处理流数据
       while (true) {
@@ -342,23 +372,129 @@ class DifyClient extends BaseClient {
             // 提取data部分
             const dataStr = message.substring(5).trim();
             const data = JSON.parse(dataStr);
-            logger.debug('[DifyClient] Received SSE event:', data.event);
+            logger.debug('[DifyClient] Received SSE event:', data.event, data.data?.title);
+            
+            // 处理工作流事件
+            if (data.event === 'node_started') {
+              const nodeId = data.data.node_id;
+              const title = data.data.title;
+              // 使用setAgentUpdate发送状态更新
+              this.setAgentUpdate(runId, title, { 
+                type: 'start',
+                nodeId: nodeId
+              });
+            } else if (data.event === 'node_finished') {
+              /*
+              const nodeId = data.data.node_id;
+              const title = data.data.title;
+              // 使用setAgentUpdate发送状态完成
+              this.setAgentUpdate(runId, title, {
+                type: 'end',
+                nodeId: nodeId
+              });
+              */
+            } else if (data.event === 'workflow_finished') {
+              // 发送工作流完成状态更新
+              // this.setAgentUpdate(runId, '工作流处理完成', { type: 'end' });
+              logger.debug('[DifyClient] 工作流完成');
+            }
             
             if (data.event === 'message') {
               const content = data.answer || '';
               logger.debug(content);
-              fullText += content;
-              this.conversationId = data.conversation_id || this.conversationId;
               
-              // 如果有onProgress回调，发送增量更新
-              if (typeof onProgress === 'function') {
-                onProgress(content);
+              // 流式处理思考内容
+              let processedContent = content;
+              
+              // 检查是否开始收集思考内容
+              if (!collectingThinking && content.includes('<details')) {
+                collectingThinking = true;
+                if (!hasSentThinkStart) {
+                  // 切换到reasoning类型
+                  switchRunStepType('reasoning');
+                  hasSentThinkStart = true;
+                  processedContent = content.substring(0, content.indexOf('<details')) + '\n\n:::thinking\n' +content.substring(content.indexOf('<details'));
+                }
+                
+                // 从<details开始截取思考内容
+                const detailsStartIndex = content.indexOf('<details');
+                // 移除<details>部分
+                
+                // 将details后的内容发送到思考流
+                const thinkingPart = content.substring(detailsStartIndex);
+                if (thinkingPart) {
+                  this.sendReasoningDelta(reasoningStepId, thinkingPart);
+                }
+                
+                // 保留完整内容，包括思考部分
+                fullText +=  processedContent;
+
+                processedContent = content.substring(0, detailsStartIndex);
+                // 只将非思考部分发送到message流
+                if (processedContent) {
+                  // 切换到message_creation类型
+                  switchRunStepType('message_creation');
+                  this.sendMessageDelta(messageStepId, processedContent);
+                }
+              } 
+              // 如果正在收集思考内容
+              else if (collectingThinking) {
+                // 直接发送内容作为思考内容
+                this.sendReasoningDelta(reasoningStepId, content);
+                
+                // 将思考内容添加到最终文本
+                
+                
+                // 检查是否结束思考内容
+                if (content.includes('</details>')) {
+                  collectingThinking = false;
+                  // 发送思考结束标记
+                  
+                  // 从内容中提取</details>后的部分
+                  const detailsEndIndex = content.indexOf('</details>') + 10;
+                  processedContent = ':::\n\n\n' + content.substring(detailsEndIndex) ;
+                  
+                  // 将</details>后的部分发送到message流
+                  if (processedContent) {
+                    // 切换到message_creation类型
+                    switchRunStepType('message_creation');
+                    this.sendMessageDelta(messageStepId, content.substring(detailsEndIndex));
+                  }
+
+                  fullText += processedContent;
+                } else {
+                  fullText += content;
+                  // 如果还在收集思考内容，不发送到message流
+                  processedContent = '';
+                }
               }
+              else {
+                // 更新最终文本，并发送进度更新
+                fullText += processedContent;
+                /*
+                if (typeof onProgress === 'function') {
+                  onProgress(processedContent);
+                }
+                */
+                // 发送消息增量更新，使用message专用ID
+                switchRunStepType('message_creation');
+                this.sendMessageDelta(messageStepId, processedContent);
+              }
+              
+              this.conversationId = data.conversation_id || this.conversationId;
               
               // 控制流速
               await sleep(this.streamRate);
             } 
             else if (data.event === 'message_end') {
+              // 如果消息结束但仍在收集思考内容，确保关闭思考
+              if (collectingThinking) {
+                collectingThinking = false;
+                if (hasSentThinkStart) {
+                  this.sendReasoningDelta(reasoningStepId, '</think>');
+                }
+              }
+              
               this.conversationId = data.conversation_id || this.conversationId;
               this.metadata = data.metadata || {};
             }
@@ -384,6 +520,107 @@ class DifyClient extends BaseClient {
       logger.error('[DifyClient] 流式请求失败:', error);
       throw error;
     }
+  }
+  
+  /**
+   * 发送on_run_step事件
+   * @param {string} stepId - 步骤ID
+   * @param {string} runId - 运行ID
+   * @param {string} messageId - 消息ID
+   * @param {string} type - 步骤类型，可以是'reasoning'或'message_creation'
+   */
+  sendRunStepEvent(stepId, runId, messageId, type) {
+    if (!this.res) return;
+    
+    const runStepEvent = {
+          event: 'on_run_step',
+          data: {
+            id: stepId,
+            runId: runId,
+            type: type,
+            index: 0,
+            stepDetails: {
+              type: type,
+              [type]: {
+                message_id: messageId
+              }
+            }
+          }
+    };
+    
+    // 使用sendEvent发送事件
+    sendEvent(this.res, runStepEvent);
+  }
+  
+  /**
+   * 发送on_reasoning_delta事件
+   * @param {string} stepId - 步骤ID
+   * @param {string} thinkText - 思考内容文本
+   */
+  sendReasoningDelta(stepId, thinkText) {
+    if (!this.res) return;
+    
+    const reasoningEvent = {
+        event: 'on_reasoning_delta',
+        data: {
+          id: stepId,
+          delta: {
+            content: [
+              {
+                type: 'think',
+                think: thinkText
+              }
+            ]
+          }
+        }
+    };
+    
+    // 使用sendEvent发送事件
+    sendEvent(this.res, reasoningEvent);
+  }
+  
+  /**
+   * 发送on_message_delta事件
+   * @param {string} stepId - 步骤ID
+   * @param {string} messageText - 消息内容文本
+   */
+  sendMessageDelta(stepId, messageText) {
+    if (!this.res) return;
+    
+    const messageEvent = {
+        event: 'on_message_delta',
+        data: {
+          id: stepId,
+          delta: {
+            content: [
+              {
+                type: 'text',
+                text: messageText
+              }
+            ]
+          }
+        }
+    };
+    
+    // 使用sendEvent发送事件
+    sendEvent(this.res, messageEvent);
+  }
+  
+  /**
+   * 从内容中移除<details>标签
+   * @param {string} content - 包含<details>标签的内容
+   * @returns {string} 不含<details>标签的内容
+   */
+  removeDetailsTag(content) {
+    return content.replace(/<details[^>]*>[\s\S]*?<\/details>/g, '');
+  }
+
+  checkVisionRequest(files) {
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      return false;
+    }
+    // 检查是否有任何文件需要处理
+    return files.some(file => file && file.type && file.type.startsWith('image/'));
   }
 
   /**
@@ -414,6 +651,57 @@ class DifyClient extends BaseClient {
     }
     
     return title;
+  }
+
+  getMessageMapMethod() {
+    return (msg) => {
+      // 不过滤think内容，直接返回原始消息
+      return msg;
+    };
+  }
+
+  /**
+   * 设置代理状态更新
+   * @param {string} runId - 运行ID
+   * @param {string} status - 状态信息
+   * @param {Object} options - 附加选项
+   * @param {string} options.type - 状态类型，可以是 'start' 或 'end'
+   * @param {string} options.nodeId - 节点ID
+   */
+  setAgentUpdate(runId, status, options = {}) {
+    if (!this.res) return;
+    
+    const { type = 'progress', nodeId = '' } = options;
+    
+    // 根据类型添加前缀或后缀
+    let statusText = status;
+    if (type === 'start') {
+      statusText = `执行中: ${status}`;
+    } else if (type === 'end') {
+      statusText = `完成: ${status}`;
+    }
+    
+    // 创建代理更新事件
+    const agentUpdateEvent = {
+      event: 'on_agent_update',
+      data: {
+        runId: runId,
+        index: 0,
+        type: ContentTypes.AGENT_UPDATE,
+        agent_update: {
+          runId: runId,
+          index: 0,
+          status: statusText,
+          nodeId: nodeId,
+          agentId: 'dify' // 添加 agentId 字段，使用 'dify' 作为默认值
+        }
+      }
+    };
+    
+    // 发送事件
+    sendEvent(this.res, agentUpdateEvent);
+    
+    return statusText;
   }
 }
 
