@@ -43,10 +43,29 @@ export const getAvailableEndpoints = (
   const defaultSet = new Set(defaultEndpoints);
   const availableEndpoints: EModelEndpoint[] = [];
 
+  // 先处理dify端点，检查是否被禁用
+  const difyDisabled = endpointsConfig['dify']?.disabled === true;
+
   for (const endpoint in endpointsConfig) {
+    const config = endpointsConfig[endpoint];
+    
+    // 如果是dify端点并且被禁用，则跳过
+    if (endpoint === 'dify' && difyDisabled) {
+      continue;
+    }
+    
+    // 对于非dify的端点，如果被禁用则跳过
+    if (endpoint !== 'dify' && config?.disabled === true) {
+      continue;
+    }
+    
+    // 对于clientType为'dify'的端点，即使dify被禁用，也要显示
+    const isDifyClient = config?.clientType === 'dify';
+    
     // Check if endpoint is in the filter or its type is in defaultEndpoints
     if (
       filter[endpoint] ||
+      isDifyClient || // 添加对dify客户端类型的支持
       (endpointsConfig[endpoint]?.type &&
         defaultSet.has(endpointsConfig[endpoint]?.type as EModelEndpoint))
     ) {

@@ -37,10 +37,14 @@ export const createDropdownSetter = (setValue: (value: string) => void): Dropdow
 /**
  * Creates an Option object for a provider dropdown.
  **/
-export const createProviderOption = (provider: string) => ({
-  label: (alternateName[provider] as string | undefined) ?? provider,
-  value: provider,
-});
+export const createProviderOption = (provider: string, endpointsConfig?: any) => {
+  // 优先使用modelDisplayLabel
+  const modelDisplayLabel = endpointsConfig?.[provider]?.modelDisplayLabel;
+  return {
+    label: modelDisplayLabel || (alternateName[provider] as string | undefined) || provider,
+    value: provider,
+  };
+};
 
 export const processAgentOption = ({
   agent: _agent,

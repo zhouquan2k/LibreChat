@@ -35,12 +35,17 @@ const EndpointItems: FC<{
         }
         const userProvidesKey: boolean | null | undefined =
           getEndpointField(endpointsConfig, endpoint, 'userProvide') ?? false;
+        
+        // 优先使用modelDisplayLabel作为显示名称
+        const modelDisplayLabel = getEndpointField(endpointsConfig, endpoint, 'modelDisplayLabel');
+        const displayTitle = modelDisplayLabel || alternateName[endpoint] || endpoint;
+        
         return (
           <Close asChild key={`endpoint-${endpoint}`}>
             <div key={`endpoint-${endpoint}`}>
               <MenuItem
                 key={`endpoint-item-${endpoint}`}
-                title={alternateName[endpoint] || endpoint}
+                title={displayTitle}
                 value={endpoint}
                 selected={selected === endpoint}
                 data-testid={`endpoint-item-${endpoint}`}

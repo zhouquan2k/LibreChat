@@ -24,7 +24,7 @@ async function loadDefaultEndpointsConfig(req) {
     [EModelEndpoint.gptPlugins]: gptPlugins,
     [EModelEndpoint.anthropic]: config[EModelEndpoint.anthropic],
     [EModelEndpoint.bedrock]: config[EModelEndpoint.bedrock],
-    [EModelEndpoint.dify]: dify,
+    ...(dify ? { [EModelEndpoint.dify]: dify } : {}),
   };
 
   const orderedAndFilteredEndpoints = enabledEndpoints.reduce((config, key, index) => {

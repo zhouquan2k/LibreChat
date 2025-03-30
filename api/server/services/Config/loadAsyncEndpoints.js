@@ -31,7 +31,7 @@ async function loadAsyncEndpoints(req) {
   // 处理dify端点配置
   const difyUserProvides = isUserProvided(difyApiKey);
   const difyUserProvidesURL = isUserProvided(difyBaseUrl);
-  const dify = difyApiKey ? { 
+  const dify = (difyApiKey && difyBaseUrl) ? { 
     userProvide: difyUserProvides,
     userProvideURL: difyUserProvidesURL
   } : false;

@@ -12,7 +12,8 @@ const { getCustomEndpointConfig } = require('~/server/services/Config');
 const { fetchModels } = require('~/server/services/ModelService');
 const { isUserProvided, sleep } = require('~/server/utils');
 const getLogStores = require('~/cache/getLogStores');
-const { OpenAIClient } = require('~/app');
+const { OpenAIClient, DifyClient } = require('~/app');
+const { logger } = require('~/config');
 
 const { PROXY } = process.env;
 
@@ -166,11 +167,24 @@ const initializeClient = async ({ req, res, endpointOption, optionsOnly, overrid
     };
   }
 
-  const client = new OpenAIClient(apiKey, clientOptions);
-  return {
-    client,
-    openAIApiKey: apiKey,
-  };
+  // 根据clientType决定使用哪种客户端
+  const clientType = endpointConfig.clientType?.toLowerCase();
+  logger.debug(`[Custom Endpoint] Using client type: ${clientType || 'openai'} for ${endpoint}`);
+
+  if (clientType === 'dify') {
+    const client = new DifyClient(apiKey, clientOptions);
+    return {
+      client,
+      difyApiKey: apiKey,
+    };
+  } else {
+    // 默认使用OpenAIClient
+    const client = new OpenAIClient(apiKey, clientOptions);
+    return {
+      client,
+      openAIApiKey: apiKey,
+    };
+  }
 };
 
 module.exports = initializeClient;

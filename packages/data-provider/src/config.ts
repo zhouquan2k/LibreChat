@@ -565,6 +565,15 @@ export const balanceSchema = z.object({
   refillAmount: z.number().optional().default(10000),
 });
 
+const difyEndpointSchema = z.object({
+  userProvide: z.boolean().optional(),
+  userProvideURL: z.boolean().optional(),
+  apiKey: z.string(),
+  baseURL: z.string(),
+  models: z.array(z.string()).optional(),
+  iconURL: z.string().optional(),
+});
+
 export const configSchema = z.object({
   version: z.string(),
   cache: z.boolean().default(true),
@@ -611,6 +620,7 @@ export const configSchema = z.object({
       [EModelEndpoint.agents]: agentsEndpointSChema.optional(),
       [EModelEndpoint.custom]: z.array(endpointSchema.partial()).optional(),
       [EModelEndpoint.bedrock]: baseEndpointSchema.optional(),
+      [EModelEndpoint.dify]: difyEndpointSchema.optional(),
     })
     .strict()
     .refine((data) => Object.keys(data).length > 0, {

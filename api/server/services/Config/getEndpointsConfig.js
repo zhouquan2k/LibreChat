@@ -20,6 +20,15 @@ async function getEndpointsConfig(req) {
 
   /** @type {TEndpointsConfig} */
   const mergedConfig = { ...defaultEndpointsConfig, ...customConfigEndpoints };
+  
+  // 确保即使没有默认dify配置，dify端点仍然存在，这样custom端点下的dify应用也会显示
+  if (!mergedConfig[EModelEndpoint.dify]) {
+    mergedConfig[EModelEndpoint.dify] = {
+      order: 999, // 设置一个较高的顺序值
+      disabled: true // 标记为禁用，这样默认dify不会显示，但custom里的dify应用会显示
+    };
+  }
+  
   if (mergedConfig[EModelEndpoint.assistants] && req.app.locals?.[EModelEndpoint.assistants]) {
     const { disableBuilder, retrievalModels, capabilities, version, ..._rest } =
       req.app.locals[EModelEndpoint.assistants];
@@ -63,13 +72,6 @@ async function getEndpointsConfig(req) {
     mergedConfig[EModelEndpoint.bedrock] = {
       ...mergedConfig[EModelEndpoint.bedrock],
       availableRegions,
-    };
-  }
-
-  if (mergedConfig[EModelEndpoint.dify]) {
-    mergedConfig[EModelEndpoint.dify] = {
-      ...mergedConfig[EModelEndpoint.dify],
-      order: 6,
     };
   }
 

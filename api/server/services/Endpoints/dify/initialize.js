@@ -9,6 +9,7 @@ const { isUserProvided } = require('~/server/utils');
 const getLogStores = require('~/cache/getLogStores');
 const DifyClient = require('~/app/clients/DifyClient');
 const { logger } = require('~/config');
+const { getCustomConfig } = require('~/server/services/Config/getCustomConfig');
 
 const { PROXY } = process.env;
 const DIFY_API_KEY = process.env.DIFY_API_KEY || '';
@@ -20,46 +21,119 @@ const DIFY_BASE_URL = process.env.DIFY_BASE_URL || 'http://192.168.157.17/v1';
 const initializeClient = async ({ req, res, endpointOption }) => {
   const { key: expiresAt, conversationId, parentMessageId, responseMessageId } = req.body;
   
-  const userProvidesKey = isUserProvided(DIFY_API_KEY);
-  const userProvidesURL = isUserProvided(DIFY_BASE_URL);
+  // 从自定义配置获取用户设置
+  const customConfig = await getCustomConfig();
+  const difyConfig = customConfig?.endpoints?.dify || {};
+  
+  const userProvideKey = typeof difyConfig.userProvide === 'boolean' ? difyConfig.userProvide : true;
+  const userProvideURL = typeof difyConfig.userProvideURL === 'boolean' ? difyConfig.userProvideURL : true;
+  
+  const userProvidesKey = isUserProvided(DIFY_API_KEY) && userProvideKey;
+  const userProvidesURL = isUserProvided(DIFY_BASE_URL) && userProvideURL;
   
   let userValues = null;
-  let apiKey = DIFY_API_KEY;
-  let baseURL = DIFY_BASE_URL;
+  let apiKey = difyConfig.apiKey || DIFY_API_KEY;
+  let baseURL = difyConfig.baseURL || DIFY_BASE_URL;
   
+  // 处理环境变量
+  if (apiKey && envVarRegex.test(apiKey)) {
+    apiKey = process.env[extractEnvVariable(apiKey)] || '';
+  }
+  
+  if (baseURL && envVarRegex.test(baseURL)) {
+    baseURL = process.env[extractEnvVariable(baseURL)] || '';
+  }
+  
+  // 如果配置中有models，设置到endpointOption
+  if (difyConfig.models && Array.isArray(difyConfig.models)) {
+    endpointOption.modelOptions = {
+      ...endpointOption.modelOptions,
+      availableModels: difyConfig.models
+    };
+  }
+  
+  // 处理用户提供的密钥和URL
   if (expiresAt && (userProvidesKey || userProvidesURL)) {
     checkUserKeyExpiry(expiresAt, 'dify');
     userValues = await getUserKeyValues({ userId: req.user.id, name: 'dify' });
     
-    apiKey = userProvidesKey ? userValues?.apiKey : DIFY_API_KEY;
-    baseURL = userProvidesURL ? userValues?.baseURL : DIFY_BASE_URL;
-  }
-
-  if (userProvidesKey && !apiKey) {
-    throw new Error(
-      JSON.stringify({
-        type: ErrorTypes.NO_USER_KEY,
-      }),
-    );
-  }
-
-  if (userProvidesURL && !baseURL) {
-    throw new Error(
-      JSON.stringify({
-        type: ErrorTypes.NO_BASE_URL,
-      }),
-    );
-  }
-
-  if (!apiKey) {
-    throw new Error('Dify API密钥未提供');
-  }
-
-  if (!baseURL) {
-    throw new Error('Dify Base URL未提供');
+    apiKey = userProvidesKey ? userValues?.apiKey : apiKey;
+    baseURL = userProvidesURL ? userValues?.baseURL : baseURL;
   }
   
-  logger.debug('[Dify] 初始化客户端', { userProvidesKey, userProvidesURL, baseURL });
+  // 处理customEndpoint的情况 - 如果是从custom endpoint调用
+  if (endpointOption?.endpoint && endpointOption.endpoint !== 'dify') {
+    try {
+      // 查找对应的custom endpoint配置
+      const customEndpoints = customConfig?.endpoints?.custom || [];
+      const customEndpoint = customEndpoints.find(e => normalizeEndpointName(e.name) === endpointOption.endpoint);
+      
+      if (customEndpoint?.clientType === 'dify') {
+        logger.debug(`[Dify] 使用custom endpoint配置: ${endpointOption.endpoint}`);
+        
+        // 使用custom endpoint的配置
+        if (customEndpoint.apiKey) {
+          if (envVarRegex.test(customEndpoint.apiKey)) {
+            apiKey = process.env[extractEnvVariable(customEndpoint.apiKey)] || '';
+          } else {
+            apiKey = customEndpoint.apiKey;
+          }
+        }
+        
+        if (customEndpoint.baseURL) {
+          if (envVarRegex.test(customEndpoint.baseURL)) {
+            baseURL = process.env[extractEnvVariable(customEndpoint.baseURL)] || '';
+          } else {
+            baseURL = customEndpoint.baseURL;
+          }
+        }
+      }
+    } catch (error) {
+      logger.error(`[Dify] 处理custom endpoint时出错: ${error.message}`);
+    }
+  }
+
+  // 对于clientType为dify的custom端点，我们允许没有apiKey和baseURL
+  const isCustomDify = endpointOption?.endpoint && 
+                      endpointOption.endpoint !== 'dify' && 
+                      customConfig?.endpoints?.custom?.find(e => 
+                        normalizeEndpointName(e.name) === endpointOption.endpoint && 
+                        e.clientType === 'dify');
+
+  if (!isCustomDify) {
+    // 只对标准dify端点进行验证
+    if (userProvidesKey && !apiKey) {
+      throw new Error(
+        JSON.stringify({
+          type: ErrorTypes.NO_USER_KEY,
+        }),
+      );
+    }
+
+    if (userProvidesURL && !baseURL) {
+      throw new Error(
+        JSON.stringify({
+          type: ErrorTypes.NO_BASE_URL,
+        }),
+      );
+    }
+
+    if (!apiKey) {
+      throw new Error('Dify API密钥未提供');
+    }
+
+    if (!baseURL) {
+      throw new Error('Dify Base URL未提供');
+    }
+  }
+  
+  logger.debug('[Dify] 初始化客户端', { 
+    userProvidesKey, 
+    userProvidesURL, 
+    baseURL, 
+    endpoint: endpointOption?.endpoint,
+    isCustomDify
+  });
   
   // 客户端选项
   const clientOptions = {
@@ -80,6 +154,11 @@ const initializeClient = async ({ req, res, endpointOption }) => {
     client,
     difyApiKey: apiKey
   };
+};
+
+// 添加缺失的函数
+const normalizeEndpointName = (name) => {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
 module.exports = initializeClient; 

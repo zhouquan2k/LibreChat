@@ -4,7 +4,7 @@ import { Content, Portal, Root } from '@radix-ui/react-popover';
 import type { FC, KeyboardEvent } from 'react';
 import { useChatContext, useAgentsMapContext, useAssistantsMapContext } from '~/Providers';
 import { useGetEndpointsQuery } from '~/data-provider';
-import { mapEndpoints, getEntity } from '~/utils';
+import { mapEndpoints, getEntity, getEndpointField } from '~/utils';
 import EndpointItems from './Endpoints/MenuItems';
 import useLocalize from '~/hooks/useLocalize';
 import TitleButton from './UI/TitleButton';
@@ -19,6 +19,7 @@ const EndpointsMenu: FC = () => {
   const assistantMap = useAssistantsMapContext();
   const { conversation } = useChatContext();
   const { endpoint = '' } = conversation ?? {};
+  const { data: endpointsConfig } = useGetEndpointsQuery();
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -66,9 +67,10 @@ const EndpointsMenu: FC = () => {
     assistant_id: conversation?.assistant_id,
   });
 
+  const modelDisplayLabel = getEndpointField(endpointsConfig, endpoint, 'modelDisplayLabel');
   const primaryText = entity
     ? entity.name
-    : (alternateName[endpoint] as string | undefined) ?? endpoint;
+    : modelDisplayLabel || (alternateName[endpoint] as string | undefined) || endpoint;
 
   return (
     <Root>

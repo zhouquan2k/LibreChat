@@ -1,4 +1,5 @@
 {
+  "name": "LibreChat",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspaces",
