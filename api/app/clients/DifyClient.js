@@ -19,6 +19,7 @@ class DifyClient extends BaseClient {
     super(apiKey, options);
     this.setOptions(options);
     this.clientName = EModelEndpoint.dify;
+    this.clientType = EModelEndpoint.dify;
     this.modelOptions = {};
     this.metadata = {};
   }

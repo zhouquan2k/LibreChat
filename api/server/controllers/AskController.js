@@ -34,6 +34,9 @@ const AskController = async (req, res, next, initializeClient, addTitle) => {
   const newConvo = !conversationId;
   const user = req.user.id;
 
+  // 将sender添加到endpointOption
+  endpointOption.sender = sender;
+
   const getReqData = (data = {}) => {
     for (let key in data) {
       if (key === 'userMessage') {
