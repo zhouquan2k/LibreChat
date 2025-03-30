@@ -413,58 +413,66 @@ class DifyClient extends BaseClient {
                   // 切换到reasoning类型
                   switchRunStepType('reasoning');
                   hasSentThinkStart = true;
-                  processedContent = content.substring(0, content.indexOf('<details')) + '\n\n:::thinking\n' +content.substring(content.indexOf('<details'));
+                  
+                  // 分割内容并清理标签
+                  const beforeThinking = content.substring(0, content.indexOf('<details'));
+                  const thinkingContent = this.cleanDetailsAndSummaryTags(content.substring(content.indexOf('<details')));
+                  
+                  // 添加思考标记
+                  processedContent = beforeThinking + '\n\n:::thinking\n' + thinkingContent;
                 }
                 
                 // 从<details开始截取思考内容
                 const detailsStartIndex = content.indexOf('<details');
-                // 移除<details>部分
                 
-                // 将details后的内容发送到思考流
-                const thinkingPart = content.substring(detailsStartIndex);
+                // 将details后的内容发送到思考流，但清理标签
+                const thinkingPart = this.cleanDetailsAndSummaryTags(content.substring(detailsStartIndex));
                 if (thinkingPart) {
                   this.sendReasoningDelta(reasoningStepId, thinkingPart);
                 }
                 
-                // 保留完整内容，包括思考部分
-                fullText +=  processedContent;
+                // 保留完整内容，包括清理后的思考部分
+                fullText += processedContent;
 
-                processedContent = content.substring(0, detailsStartIndex);
                 // 只将非思考部分发送到message流
-                if (processedContent) {
+                const beforeDetailsContent = content.substring(0, detailsStartIndex);
+                if (beforeDetailsContent) {
                   // 切换到message_creation类型
                   switchRunStepType('message_creation');
-                  this.sendMessageDelta(messageStepId, processedContent);
+                  this.sendMessageDelta(messageStepId, beforeDetailsContent);
                 }
               } 
               // 如果正在收集思考内容
               else if (collectingThinking) {
-                // 直接发送内容作为思考内容
-                this.sendReasoningDelta(reasoningStepId, content);
+                // 清理标签并发送内容作为思考内容
+                const cleanedContent = this.cleanDetailsAndSummaryTags(content);
+                this.sendReasoningDelta(reasoningStepId, cleanedContent);
                 
-                // 将思考内容添加到最终文本
-                
+                // 将清理后的思考内容添加到最终文本
+                fullText += cleanedContent;
                 
                 // 检查是否结束思考内容
                 if (content.includes('</details>')) {
                   collectingThinking = false;
-                  // 发送思考结束标记
                   
                   // 从内容中提取</details>后的部分
                   const detailsEndIndex = content.indexOf('</details>') + 10;
-                  processedContent = ':::\n\n\n' + content.substring(detailsEndIndex) ;
+                  const afterDetailsContent = content.substring(detailsEndIndex);
+                  
+                  // 添加思考结束标记并添加后续内容
+                  processedContent = ':::\n\n\n' + afterDetailsContent;
                   
                   // 将</details>后的部分发送到message流
-                  if (processedContent) {
+                  if (afterDetailsContent) {
                     // 切换到message_creation类型
                     switchRunStepType('message_creation');
-                    this.sendMessageDelta(messageStepId, content.substring(detailsEndIndex));
+                    this.sendMessageDelta(messageStepId, afterDetailsContent);
                   }
 
-                  fullText += processedContent;
-                } else {
-                  fullText += content;
-                  // 如果还在收集思考内容，不发送到message流
+                  fullText += ':::\n\n\n' + afterDetailsContent;
+                }
+                // 如果还在收集思考内容，不发送到message流
+                else {
                   processedContent = '';
                 }
               }
@@ -491,12 +499,18 @@ class DifyClient extends BaseClient {
               if (collectingThinking) {
                 collectingThinking = false;
                 if (hasSentThinkStart) {
-                  this.sendReasoningDelta(reasoningStepId, '</think>');
+                  // 发送思考结束标记
+                  this.sendReasoningDelta(reasoningStepId, '\n:::\n');
+                  // 添加分隔符到最终文本
+                  fullText += '\n:::\n';
                 }
               }
               
               this.conversationId = data.conversation_id || this.conversationId;
               this.metadata = data.metadata || {};
+              
+              // 确保最终文本中没有未处理的标签
+              fullText = this.cleanDetailsAndSummaryTags(fullText);
             }
             else if (data.event === 'error') {
               logger.error('[DifyClient] Stream error:', data.message);
@@ -612,7 +626,31 @@ class DifyClient extends BaseClient {
    * @returns {string} 不含<details>标签的内容
    */
   removeDetailsTag(content) {
+    // 移除整个<details>...</details>块
     return content.replace(/<details[^>]*>[\s\S]*?<\/details>/g, '');
+  }
+
+  /**
+   * 从内容中移除<details>和<summary>标签，但保留内部内容
+   * @param {string} content - 包含<details>和<summary>标签的内容
+   * @returns {string} 移除标签但保留内容的文本
+   */
+  cleanDetailsAndSummaryTags(content) {
+    if (!content) return '';
+    
+    // 首先移除<summary>...</summary>块，处理各种属性情况
+    let result = content.replace(/<summary[^>]*>[\s\S]*?<\/summary>/gi, '');
+    
+    // 移除<details>开始标签，处理各种属性情况
+    result = result.replace(/<details[^>]*>/gi, '');
+    
+    // 移除</details>结束标签
+    result = result.replace(/<\/details>/gi, '');
+    
+    // 清理可能的多余空行
+    result = result.replace(/\n{3,}/g, '\n\n');
+    
+    return result;
   }
 
   checkVisionRequest(files) {
