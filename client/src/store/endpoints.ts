@@ -14,7 +14,7 @@ const defaultConfig: TEndpointsConfig = {
   [EModelEndpoint.anthropic]: null,
   [EModelEndpoint.bedrock]: null,
   [EModelEndpoint.custom]: null,
-  ['dify']: null,
+  [EModelEndpoint.dify]: null,
 };
 
 const endpointsConfig = atom<TEndpointsConfig>({

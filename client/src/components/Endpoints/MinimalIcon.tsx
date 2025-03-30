@@ -55,9 +55,9 @@ const MinimalIcon: React.FC<IconProps> = (props) => {
       icon: <BedrockIcon className="icon-xl text-text-primary" />,
       name: props.modelLabel ?? alternateName[EModelEndpoint.bedrock],
     },
-    ['dify']: {
+    [EModelEndpoint.dify]: {
       icon: <DifyIcon className="icon-md" />,
-      name: props.modelLabel ?? 'Dify',
+      name: props.modelLabel ?? alternateName[EModelEndpoint.dify],
     },
     default: {
       icon: <UnknownIcon iconURL={iconURL} endpoint={endpoint} className="icon-sm" context="nav" />,

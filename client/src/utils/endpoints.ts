@@ -44,18 +44,18 @@ export const getAvailableEndpoints = (
   const availableEndpoints: EModelEndpoint[] = [];
 
   // 先处理dify端点，检查是否被禁用
-  const difyDisabled = endpointsConfig['dify']?.disabled === true;
+  const difyDisabled = endpointsConfig[EModelEndpoint.dify]?.disabled === true;
 
   for (const endpoint in endpointsConfig) {
     const config = endpointsConfig[endpoint];
     
     // 如果是dify端点并且被禁用，则跳过
-    if (endpoint === 'dify' && difyDisabled) {
+    if (endpoint === EModelEndpoint.dify && difyDisabled) {
       continue;
     }
     
     // 对于非dify的端点，如果被禁用则跳过
-    if (endpoint !== 'dify' && config?.disabled === true) {
+    if (endpoint !== EModelEndpoint.dify && config?.disabled === true) {
       continue;
     }
     

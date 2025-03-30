@@ -144,6 +144,7 @@ const initializeClient = async ({ req, res, endpointOption }) => {
     conversationId,
     parentMessageId, 
     responseMessageId,
+    sender: endpointOption.sender,
     ...endpointOption,
   };
   

@@ -21,9 +21,6 @@ const AgentUpdate: React.FC<AgentUpdateProps> = ({ currentAgentId, status, nodeI
   // 组合状态和节点ID
   const displayStatus = useMemo(() => {
     if (!status) return '';
-    if (nodeId) {
-      return `${status} (${nodeId})`;
-    }
     return status;
   }, [status, nodeId]);
   
@@ -46,18 +43,16 @@ const AgentUpdate: React.FC<AgentUpdateProps> = ({ currentAgentId, status, nodeI
             />
           </div>
           <div className="font-medium text-text-primary">{currentAgent?.name}</div>
-        </div>
-        {displayStatus && (
-          <div className="ml-8 mt-1 text-sm text-text-secondary">
-            <div className="flex items-center gap-1.5">
+          {displayStatus && (
+            <div className="flex items-center gap-1.5 text-sm text-text-secondary">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span>
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500"></span>
               </span>
               <span>{displayStatus}</span>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

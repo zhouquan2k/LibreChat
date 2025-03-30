@@ -2474,3 +2474,20 @@ button.scroll-convo {
 .scale-98 {
   transform: scale(0.98);
 }
+
+/* 添加在文件末尾 */
+
+/* 增强消息内容的间距控制 */
+.agent-turn .text-message {
+  margin-top: 0.5em !important;  /* 减小最终消息的间距 */
+}
+
+/* 确保在流式传输期间也保持足够的间距 */
+.submitting .agent-turn .text-message {
+  margin-top: 0.5rem !important;  /* 流式传输时保持较大间距 */
+}
+
+/* 调整人卫inside知识库模型名称与内容之间的间距 */
+.agent-turn > div + .text-message {
+  margin-top: 0.5rem !important;  /* 减小最终消息的间距 */
+}

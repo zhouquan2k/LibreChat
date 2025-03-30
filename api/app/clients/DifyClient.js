@@ -51,7 +51,9 @@ class DifyClient extends BaseClient {
     this.parentMessageId = options.parentMessageId || null;
     this.responseMessageId = options.responseMessageId;
     this.streamRate = options.streamRate ?? Constants.DEFAULT_STREAM_RATE;
-    this.sender = options.sender ?? 'Dify';
+    if (options.sender) {
+      this.sender = options.sender;
+    }
     this.userLabel = options.userLabel || 'User';
     this.maxContextTokens = options.maxContextTokens || 4000;
     this.maxResponseTokens = options.maxResponseTokens || 1000;
@@ -714,9 +716,9 @@ class DifyClient extends BaseClient {
     // 根据类型添加前缀或后缀
     let statusText = status;
     if (type === 'start') {
-      statusText = `执行中: ${status}`;
+      statusText = `${status}`;
     } else if (type === 'end') {
-      statusText = `完成: ${status}`;
+      // statusText = `完成: ${status}`;
     }
     
     // 创建代理更新事件
