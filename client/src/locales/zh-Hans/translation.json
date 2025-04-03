@@ -129,7 +129,7 @@
   "com_auth_username_max_length": "用户名最多 20 个字符",
   "com_auth_username_min_length": "用户名至少 2 个字符",
   "com_auth_verify_your_identity": "验证您的身份",
-  "com_auth_welcome_back": "欢迎",
+  "com_auth_welcome_back": "智能推理助手",
   "com_click_to_download": "（点击此处下载）",
   "com_download_expired": "下载已过期",
   "com_download_expires": "(点击此处下载 - {{0}}后过期)",
