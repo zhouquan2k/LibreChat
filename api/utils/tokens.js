@@ -203,7 +203,13 @@ const aggregateModels = { ...openAIModels, ...googleModels, ...bedrockModels, ..
 
 const maxTokensMap = {
   [EModelEndpoint.azureOpenAI]: openAIModels,
-  [EModelEndpoint.openAI]: aggregateModels,
+  [EModelEndpoint.openAI]: {
+    ...aggregateModels,
+    'deepseek-chat': 63000,
+    'deepseek-coder': 63000,
+    'deepseek-reasoner': 63000,
+    'default': 63000,
+  },
   [EModelEndpoint.agents]: aggregateModels,
   [EModelEndpoint.custom]: aggregateModels,
   [EModelEndpoint.google]: googleModels,

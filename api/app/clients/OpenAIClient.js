@@ -158,14 +158,22 @@ class OpenAIClient extends BaseClient {
     this.isUnofficialChatGptModel =
       model.startsWith('text-chat') || model.startsWith('text-davinci-002-render');
 
-    this.maxContextTokens =
-      this.options.maxContextTokens ??
-      getModelMaxTokens(
-        model,
-        this.options.endpointType ?? this.options.endpoint,
-        this.options.endpointTokenConfig,
-      ) ??
-      4095; // 1 less than maximum
+    // Add Deepseek model handling
+    const isDeepseekModel = model.includes('deepseek') || model.includes('default');
+    if (isDeepseekModel) {
+      this.maxContextTokens = 63000;
+      this.maxResponseTokens = this.modelOptions.max_tokens ?? 40000;
+      this.maxPromptTokens = this.maxContextTokens - this.maxResponseTokens;
+    } else {
+      this.maxContextTokens =
+        this.options.maxContextTokens ??
+        getModelMaxTokens(
+          model,
+          this.options.endpointType ?? this.options.endpoint,
+          this.options.endpointTokenConfig,
+        ) ??
+        4095;
+    }
 
     if (this.shouldSummarize) {
       this.maxContextTokens = Math.floor(this.maxContextTokens / 2);
@@ -784,6 +792,10 @@ class OpenAIClient extends BaseClient {
     }
 
     const titleChatCompletion = async () => {
+      if (this.options.titleModel === '_none') {
+        return '新的对话';
+      }
+
       try {
         modelOptions.model = model;
 
@@ -831,9 +843,9 @@ ${convo}
     };
 
     if (this.options.titleMethod === 'completion') {
-      await titleChatCompletion();
+      title = await titleChatCompletion();
       logger.debug('[OpenAIClient] Convo Title: ' + title);
-      return title;
+      return title.trim();
     }
 
     try {

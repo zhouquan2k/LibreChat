@@ -96,7 +96,7 @@
   "com_auth_login": "登入",
   "com_auth_login_with_new_password": "您現在可以使用新密碼登入。",
   "com_auth_name_max_length": "名稱長度長度必須少於 80 個字元",
-  "com_auth_name_min_length": "名稱長度必須至少有 3 個字元",
+  "com_auth_name_min_length": "名稱長度必須至少有 2 個字元",
   "com_auth_name_required": "名稱必填",
   "com_auth_no_account": "還沒有帳號？",
   "com_auth_password": "密碼",
@@ -716,5 +716,6 @@
   "com_ui_yes": "是",
   "com_ui_zoom": "縮放",
   "com_user_message": "您",
-  "com_warning_resubmit_unsupported": "此端點不支援重新送出 AI 訊息。"
+  "com_warning_resubmit_unsupported": "此端點不支援重新送出 AI 訊息。",
+  "com_nav_release_notes": "版本更新说明"
 }

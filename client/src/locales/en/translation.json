@@ -847,5 +847,6 @@
   "com_ui_yes": "Yes",
   "com_ui_zoom": "Zoom",
   "com_user_message": "You",
-  "com_warning_resubmit_unsupported": "Resubmitting the AI message is not supported for this endpoint."
+  "com_warning_resubmit_unsupported": "Resubmitting the AI message is not supported for this endpoint.",
+  "com_nav_release_notes": "Release Notes"
 }

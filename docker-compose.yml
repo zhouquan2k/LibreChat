@@ -20,6 +20,8 @@ services:
       - MEILI_HOST=http://meilisearch:7700
       - RAG_PORT=${RAG_PORT:-8000}
       - RAG_API_URL=http://rag_api:${RAG_PORT:-8000}
+    env_file:
+      - .env
     volumes:
       - type: bind
         source: ./.env
@@ -33,6 +35,8 @@ services:
     image: mongo
     restart: always
     user: "${UID}:${GID}"
+    ports:
+      - "27017:27017"
     volumes:
       - ./data-node:/data/db
     command: mongod --noauth
@@ -59,10 +63,12 @@ services:
       - pgdata2:/var/lib/postgresql/data
   rag_api:
     container_name: rag_api
-    image: ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest
+    image: ghcr.io/danny-avila/librechat-rag-api-dev:latest
     environment:
       - DB_HOST=vectordb
       - RAG_PORT=${RAG_PORT:-8000}
+    ports:
+      - "${RAG_PORT:-8000}:${RAG_PORT:-8000}"
     restart: always
     depends_on:
       - vectordb

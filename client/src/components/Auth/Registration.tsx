@@ -130,7 +130,7 @@ const Registration: React.FC = () => {
             {renderInput('name', 'com_auth_full_name', 'text', {
               required: localize('com_auth_name_required'),
               minLength: {
-                value: 3,
+                value: 2,
                 message: localize('com_auth_name_min_length'),
               },
               maxLength: {

@@ -96,14 +96,14 @@
   "com_auth_error_login_server": "内部服务器错误，请稍后再试。",
   "com_auth_error_login_unverified": "您的账户尚未验证。请检查您的邮件以获取验证链接。",
   "com_auth_facebook_login": "使用 Facebook 登录",
-  "com_auth_full_name": "姓名",
+  "com_auth_full_name": "姓名（用于显示的名称）",
   "com_auth_github_login": "使用 GitHub 登录",
   "com_auth_google_login": "使用 Google 登录",
   "com_auth_here": "这里",
   "com_auth_login": "登录",
   "com_auth_login_with_new_password": "现在你可以使用你的新密码登录。",
   "com_auth_name_max_length": "姓名最多 80 个字符",
-  "com_auth_name_min_length": "姓名至少 3 个字符",
+  "com_auth_name_min_length": "姓名至少 2 个字符",
   "com_auth_name_required": "姓名为必填项",
   "com_auth_no_account": "还没有账户？",
   "com_auth_password": "密码",
@@ -786,5 +786,6 @@
   "com_ui_yes": "是的",
   "com_ui_zoom": "缩放",
   "com_user_message": "您",
-  "com_warning_resubmit_unsupported": "此终端不支持重新提交AI消息"
+  "com_warning_resubmit_unsupported": "此终端不支持重新提交AI消息",
+  "com_nav_release_notes": "版本更新说明"
 }

@@ -1,7 +1,9 @@
 const { removeNullishValues } = require('librechat-data-provider');
 const generateArtifactsPrompt = require('~/app/clients/prompts/artifacts');
+const { getCustomConfig } = require('~/server/services/Config/getCustomConfig');
+const { config } = require('~/server/services/Config/EndpointService');
 
-const buildOptions = (endpoint, parsedBody, endpointType) => {
+const buildOptions = async (endpoint, parsedBody, endpointType) => {
   const {
     modelLabel,
     chatGptLabel,
@@ -15,12 +17,20 @@ const buildOptions = (endpoint, parsedBody, endpointType) => {
     artifacts,
     ...modelOptions
   } = parsedBody;
+
+  let defaultPromptPrefix;
+  if (!promptPrefix) {
+    const customConfig = await getCustomConfig();
+    const endpointConfig = customConfig?.endpoints?.custom?.find((e) => e.name === endpoint);
+    defaultPromptPrefix = endpointConfig?.promptPrefix;
+  }
+
   const endpointOption = removeNullishValues({
     endpoint,
     endpointType,
     modelLabel,
     chatGptLabel,
-    promptPrefix,
+    promptPrefix: promptPrefix || defaultPromptPrefix,
     resendFiles,
     imageDetail,
     iconURL,
@@ -29,6 +39,8 @@ const buildOptions = (endpoint, parsedBody, endpointType) => {
     maxContextTokens,
     modelOptions,
   });
+
+
 
   if (typeof artifacts === 'string') {
     endpointOption.artifactsPrompt = generateArtifactsPrompt({ endpoint, artifacts });

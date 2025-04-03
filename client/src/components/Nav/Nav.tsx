@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, useMemo, memo } from 'react';
 import { useRecoilValue } from 'recoil';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { ConversationListResponse } from 'librechat-data-provider';
+import { ClipboardList } from 'lucide-react';
 import {
   useLocalize,
   useHasAccess,
@@ -21,6 +22,7 @@ import NavToggle from './NavToggle';
 import NewChat from './NewChat';
 import { cn } from '~/utils';
 import store from '~/store';
+import ReleaseNotesModal from './ReleaseNotesModal';
 
 const Nav = ({
   navVisible,
@@ -37,6 +39,7 @@ const Nav = ({
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
   const [newUser, setNewUser] = useLocalStorage('newUser', true);
   const [isToggleHovering, setIsToggleHovering] = useState(false);
+  const [isReleaseNotesOpen, setIsReleaseNotesOpen] = useState(false);
 
   const hasAccessToBookmarks = useHasAccess({
     permissionType: PermissionTypes.BOOKMARKS,
@@ -188,6 +191,16 @@ const Nav = ({
                       <Spinner className={cn('m-1 mx-auto mb-4 h-4 w-4 text-text-primary')} />
                     )}
                   </div>
+                  <button
+                    className="flex w-full cursor-pointer items-center justify-between border-t border-border-light px-3 py-3 text-sm text-text-primary hover:bg-surface-hover"
+                    onClick={() => setIsReleaseNotesOpen(true)}
+                    type="button"
+                  >
+                    <div className="flex items-center gap-2">
+                      <ClipboardList className="h-4 w-4" />
+                      <span>{localize('com_nav_release_notes')}</span>
+                    </div>
+                  </button>
                   <AccountSettings />
                 </nav>
               </div>
@@ -217,6 +230,7 @@ const Nav = ({
           aria-label="Toggle navigation"
         />
       )}
+      <ReleaseNotesModal open={isReleaseNotesOpen} onOpenChange={setIsReleaseNotesOpen} />
     </>
   );
 };

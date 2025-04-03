@@ -58,24 +58,32 @@ function AuthLayout({
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-white dark:bg-gray-900">
+    <div
+      style={{
+        backgroundImage: 'url("/assets/hospital.jpg")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+      className="relative flex min-h-screen flex-col bg-white dark:bg-gray-900 before:content-[''] before:absolute before:inset-0 before:bg-black/40 dark:before:bg-black/50"
+    >
       <Banner />
-      <BlinkAnimation active={isFetching}>
-        <div className="mt-6 h-10 w-full bg-cover">
-          <img
-            src="/assets/logo.svg"
-            className="h-full w-full object-contain"
-            alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'LibreChat' })}
-          />
-        </div>
-      </BlinkAnimation>
       <DisplayError />
-      <div className="absolute bottom-0 left-0 md:m-4">
+      <div className="absolute bottom-0 left-0 md:m-4 z-10">
         <ThemeSelector />
       </div>
 
-      <div className="flex flex-grow items-center justify-center">
-        <div className="w-authPageWidth overflow-hidden bg-white px-6 py-4 dark:bg-gray-900 sm:max-w-md sm:rounded-lg">
+      <div className="flex flex-grow items-center justify-center relative z-10">
+        <div className="w-authPageWidth overflow-hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-md px-6 py-4 sm:max-w-md sm:rounded-lg shadow-xl">
+          <div className="flex justify-center mb-6">
+            <div className="rounded-xl overflow-hidden bg-white/80 backdrop-blur-sm p-2 shadow-lg">
+              <img
+                src="/assets/hospital-logo.png"
+                className="h-16 w-auto object-contain"
+                alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'LibreChat' })}
+              />
+            </div>
+          </div>
           {!hasStartupConfigError && !isFetching && (
             <h1
               className="mb-4 text-center text-3xl font-semibold text-black dark:text-white"
