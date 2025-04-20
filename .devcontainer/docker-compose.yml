@@ -6,10 +6,6 @@ services:
       args:
         # 更新到宿主机 docker GID
         DOCKER_GID: 999  # 请根据宿主机上的docker组GID调整这个值
-    # restart: always
-    links:
-      - mongodb
-      - meilisearch
     ports:
       - 3080:3080               # Change it to 9000:3080 to use nginx
       - 3090:3090               # Frontend dev server port
@@ -23,10 +19,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - HOST=0.0.0.0
-      - MONGO_URI=mongodb://mongodb:27017/LibreChat
+      - MONGO_URI=mongodb://host.docker.internal:27017/LibreChat
       # - CHATGPT_REVERSE_PROXY=http://host.docker.internal:8080/api/conversation # if you are hosting your own chatgpt reverse proxy with docker
       # - OPENAI_REVERSE_PROXY=http://host.docker.internal:8070/v1/chat/completions # if you are hosting your own chatgpt reverse proxy with docker
-      - MEILI_HOST=http://meilisearch:7700
+      # - MEILI_HOST=http://meilisearch:7700
 
     # Runs app on the same network as the service container, allows "forwardPorts" in devcontainer.json function.
     # network_mode: service:another-service
@@ -40,28 +36,3 @@ services:
     # Overrides default command so things don't shut down after the process ends.
     command: /bin/sh -c "while sleep 1000; do :; done"  
 
-  mongodb:
-    container_name: chat-mongodb
-    expose:
-      - 27017
-    ports:
-      - 27017:27017
-    image: mongo
-    # restart: always
-    volumes:
-      - ./data-node:/data/db
-    command: mongod --noauth
-  meilisearch:
-    container_name: chat-meilisearch
-    image: getmeili/meilisearch:v1.5
-    # restart: always
-    expose:
-      - 7700
-    # Uncomment this to access meilisearch from outside docker
-    ports: 
-      - 7700:7700 # if exposing these ports, make sure your master key is not the default value
-    environment:
-      - MEILI_NO_ANALYTICS=true
-      - MEILI_MASTER_KEY=5c71cf56d672d009e36070b5bc5e47b743535ae55c818ae3b735bb6ebfb4ba63
-    volumes:
-      - ./meili_data_v1.5:/meili_data

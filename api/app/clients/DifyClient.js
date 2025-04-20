@@ -13,6 +13,8 @@ const { logger, sendEvent } = require('~/config');
 const Tokenizer = require('~/server/services/Tokenizer');
 const BaseClient = require('./BaseClient');
 const { v4 } = require('uuid');
+const finalAnswerMarker = 'Final Answer:';
+    
 
 class DifyClient extends BaseClient {
   constructor(apiKey, options = {}) {
@@ -22,6 +24,9 @@ class DifyClient extends BaseClient {
     this.clientType = EModelEndpoint.dify;
     this.modelOptions = {};
     this.metadata = {};
+    this.user = options.user || null;
+    this.req = options.req || null;
+    this.toolCalls = new Map(); // 跟踪所有工具调用
   }
 
   setOptions(options) {
@@ -45,8 +50,9 @@ class DifyClient extends BaseClient {
       'Authorization': `Bearer ${this.apiKey}`,
       'Content-Type': 'application/json'
     };
-    this.req = options.req;
+    this.req = options.req || this.req;
     this.res = options.res;
+    this.user = options.user || this.user;
     this.abortController = null;
     this.conversationId = options.conversationId || null;
     this.parentMessageId = options.parentMessageId || null;
@@ -59,6 +65,9 @@ class DifyClient extends BaseClient {
     this.maxContextTokens = options.maxContextTokens || 4000;
     this.maxResponseTokens = options.maxResponseTokens || 1000;
     this.maxPromptTokens = options.maxPromptTokens || this.maxContextTokens - this.maxResponseTokens;
+    
+    // 保存doctor_code选项，但这里只作为备选方案
+    this.doctor_code = options.doctor_code || null;
 
     return this;
   }
@@ -225,8 +234,21 @@ class DifyClient extends BaseClient {
       query: message,
       response_mode: responseMode,
       user: opts.user || this.user || this.req?.user?.id || 'librechat_user',
-      inputs: opts.inputs || [],
+      inputs: opts.inputs || {},
     };
+    
+    // 优先使用：
+    // 1. 从选项中传入的username
+    // 2. 从requset对象中获取用户名
+    const username = this.options?.username || this.req?.user?.username;
+    
+    if (username) {
+      // 将用户名作为doctor_code参数传给Dify
+      payload.inputs['doctor_code'] = username;
+      logger.debug('[DifyClient] 使用用户名作为doctor_code:', username);
+    } else {
+      logger.warn('[DifyClient] 未找到用户名。如果Dify API要求doctor_code参数，调用可能会失败。');
+    }
     
     // 处理文件
     if (opts.files && opts.files.length > 0) {
@@ -297,30 +319,37 @@ class DifyClient extends BaseClient {
     let buffer = '';
     const onProgress = opts.onProgress;
     
-    // 生成两个唯一的step ID，分别用于reasoning和message事件
-    const reasoningStepId = `step_reasoning_${Math.random().toString(36).substring(2, 15)}`;
-    const messageStepId = `step_message_${Math.random().toString(36).substring(2, 15)}`;
-    
     // 生成运行ID
-    const runId = `run_${Math.random().toString(36).substring(2, 15)}`;
+    const runId = `run_${v4()}`;
     
     // 生成消息ID
-    const messageId = `msg_${Math.random().toString(36).substring(2, 15)}`;
+    const messageId = `msg_${v4()}`;
     
-    // 用于跟踪思考内容的状态
-    let collectingThinking = false;
-    let hasSentThinkStart = false;
+    // 跟踪思考步骤
+    const reasoningSteps = new Map();
+    
+    // 当前消息步骤ID
+    const messageStepId = `step_message_${v4()}`;
     
     // 跟踪当前的runstep类型
     let currentRunStepType = null;
+    // 跟踪当前正在处理的思考步骤ID
+    let currentReasoningStepId = null;
     
-    // 切换runstep类型的辅助函数
-    const switchRunStepType = (newType) => {
-      if (currentRunStepType !== newType) {
-        const stepId = newType === 'reasoning' ? reasoningStepId : messageStepId;
-        this.sendRunStepEvent(stepId, runId, messageId, newType);
+    // 切换runstep类型的辅助函数，只在真正需要切换时发送事件
+    const switchRunStepType = (newType, stepId) => {
+      //if (currentRunStepType !== newType) {
         currentRunStepType = newType;
-      }
+        // 只有在类型变化时才发送runStep事件
+        if (newType === 'reasoning') {
+          currentReasoningStepId = stepId;
+          this.sendRunStepEvent(stepId, runId, messageId, 'reasoning');
+        } else if (newType === 'message_creation') {
+          this.sendRunStepEvent(messageStepId, runId, messageId, 'message_creation');
+        } else if (newType === 'creating') {
+          this.sendRunStepEvent('step_id', runId, messageId, 'creating');
+        }
+      //}
     };
 
     try {
@@ -342,12 +371,12 @@ class DifyClient extends BaseClient {
         throw new Error(`Dify API错误 (${response.status}): ${errorText}`);
       }
 
-      this.sendRunStepEvent('step_id',runId, 'message_id', 'creating');
+      // 发送初始状态事件
+      switchRunStepType('creating');
       
       // 处理SSE流
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-
       
       // 读取和处理流数据
       while (true) {
@@ -375,7 +404,7 @@ class DifyClient extends BaseClient {
             // 提取data部分
             const dataStr = message.substring(5).trim();
             const data = JSON.parse(dataStr);
-            logger.debug('[DifyClient] Received SSE event:', data.event, data.data?.title);
+            logger.debug('[DifyClient] Received SSE event: ' + data.event + ': ' + data.answer);
             
             // 处理工作流事件
             if (data.event === 'node_started') {
@@ -387,110 +416,100 @@ class DifyClient extends BaseClient {
                 nodeId: nodeId
               });
             } else if (data.event === 'node_finished') {
-              /*
-              const nodeId = data.data.node_id;
-              const title = data.data.title;
-              // 使用setAgentUpdate发送状态完成
-              this.setAgentUpdate(runId, title, {
-                type: 'end',
-                nodeId: nodeId
-              });
-              */
+              // 处理节点完成事件
             } else if (data.event === 'workflow_finished') {
-              // 发送工作流完成状态更新
-              // this.setAgentUpdate(runId, '工作流处理完成', { type: 'end' });
               logger.debug('[DifyClient] 工作流完成');
             }
             
-            if (data.event === 'message') {
+            // 处理思考事件
+            if (data.event === 'agent_thought') {
+              const thoughtId = data.id;
+              const position = data.position || 0;
+              const thought = data.thought || '';
+              const tool = data.tool || '';
+              const toolInput = data.tool_input || '';
+              const observation = data.observation || '';
+              
+              // 为每个新的思考步骤创建一个唯一ID
+              if (!reasoningSteps.has(position)) {
+                reasoningSteps.set(position, `step_reasoning_${v4()}`);
+                const reasoningStepId = reasoningSteps.get(position);
+                
+                // 切换到reasoning类型并发送步骤事件
+                switchRunStepType('reasoning', reasoningStepId);
+              } else if (currentReasoningStepId !== reasoningSteps.get(position)) {
+                // 如果已存在但不是当前处理的步骤，切换步骤
+                switchRunStepType('reasoning', reasoningSteps.get(position));
+              }
+              
+              const reasoningStepId = reasoningSteps.get(position);
+              
+              // 如果有工具调用信息，发送工具调用
+              if (tool) {
+                // 重新获取确保有效
+                const currentStepId = reasoningSteps.get(position) || currentReasoningStepId || messageStepId;
+                
+                // 首先发送工具调用开始（进度0.3表示开始）
+                const toolCallId = this.sendToolCallDelta(currentStepId, tool, toolInput, null, 0.3);
+                
+                // 如果有结果，再发送带结果的更新（进度1.0表示完成）
+                if (observation) {
+                  this.sendToolCallDelta(currentStepId, tool, toolInput, observation, 1.0);
+                }
+                
+                // 可以选择保留在思考内容中也添加工具调用描述
+                let reasoningContent = `\n🌟 使用工具: ${tool}\n`;
+                if (toolInput) {
+                  reasoningContent += `输入: ${toolInput}\n`;
+                }
+                if (observation) {
+                  reasoningContent += `结果: ${observation}\n\n`;
+                  this.sendReasoningDelta(currentStepId, reasoningContent);
+                }
+              }
+              
+              // 更新全文
+              if (tool && observation) {
+                fullText += `\n 🌟 使用工具: ${tool}`;
+                if (toolInput) {
+                  fullText += `，输入: ${toolInput}\n\n`;
+                }
+              }
+            }
+            
+            // 处理消息事件
+            if (['message', 'agent_message'].includes(data.event)) {
               const content = data.answer || '';
-              logger.debug(content);
-              
-              // 流式处理思考内容
-              let processedContent = content;
-              
-              // 检查是否开始收集思考内容
-              if (!collectingThinking && content.includes('<details')) {
-                collectingThinking = true;
-                if (!hasSentThinkStart) {
+              const messageType = data.message_type || 'answer';
+
+            
+              if (messageType === 'reason') {
+                // 如果是思考内容，处理为reasoning类型
+                if (currentRunStepType !== 'reasoning') {
+                  // 创建新的思考步骤
+                  const reasoningStepId = `step_reasoning_${v4()}`;
+                  const newPosition = reasoningSteps.size + 1;
+                  reasoningSteps.set(newPosition, reasoningStepId);
+                  
                   // 切换到reasoning类型
-                  switchRunStepType('reasoning');
-                  hasSentThinkStart = true;
-                  
-                  // 分割内容并清理标签
-                  const beforeThinking = content.substring(0, content.indexOf('<details'));
-                  const thinkingContent = this.cleanDetailsAndSummaryTags(content.substring(content.indexOf('<details')));
-                  
-                  // 添加思考标记
-                  processedContent = beforeThinking + '\n\n:::thinking\n' + thinkingContent;
+                  switchRunStepType('reasoning', reasoningStepId);
                 }
                 
-                // 从<details开始截取思考内容
-                const detailsStartIndex = content.indexOf('<details');
-                
-                // 将details后的内容发送到思考流，但清理标签
-                const thinkingPart = this.cleanDetailsAndSummaryTags(content.substring(detailsStartIndex));
-                if (thinkingPart) {
-                  this.sendReasoningDelta(reasoningStepId, thinkingPart);
-                }
-                
-                // 保留完整内容，包括清理后的思考部分
-                fullText += processedContent;
-
-                // 只将非思考部分发送到message流
-                const beforeDetailsContent = content.substring(0, detailsStartIndex);
-                if (beforeDetailsContent) {
-                  // 切换到message_creation类型
+                // 发送思考内容
+                this.sendReasoningDelta(currentReasoningStepId, content);
+              } else {
+                // 答案内容，切换到message_creation类型
+                if (currentRunStepType !== 'message_creation') {
                   switchRunStepType('message_creation');
-                  this.sendMessageDelta(messageStepId, beforeDetailsContent);
+                  fullText += `\n\n${finalAnswerMarker}\n\n`;
                 }
-              } 
-              // 如果正在收集思考内容
-              else if (collectingThinking) {
-                // 清理标签并发送内容作为思考内容
-                const cleanedContent = this.cleanDetailsAndSummaryTags(content);
-                this.sendReasoningDelta(reasoningStepId, cleanedContent);
                 
-                // 将清理后的思考内容添加到最终文本
-                fullText += cleanedContent;
-                
-                // 检查是否结束思考内容
-                if (content.includes('</details>')) {
-                  collectingThinking = false;
-                  
-                  // 从内容中提取</details>后的部分
-                  const detailsEndIndex = content.indexOf('</details>') + 10;
-                  const afterDetailsContent = content.substring(detailsEndIndex);
-                  
-                  // 添加思考结束标记并添加后续内容
-                  processedContent = ':::\n\n\n' + afterDetailsContent;
-                  
-                  // 将</details>后的部分发送到message流
-                  if (afterDetailsContent) {
-                    // 切换到message_creation类型
-                    switchRunStepType('message_creation');
-                    this.sendMessageDelta(messageStepId, afterDetailsContent);
-                  }
-
-                  fullText += ':::\n\n\n' + afterDetailsContent;
-                }
-                // 如果还在收集思考内容，不发送到message流
-                else {
-                  processedContent = '';
-                }
+                // 发送消息增量
+                this.sendMessageDelta(messageStepId, content);
               }
-              else {
-                // 更新最终文本，并发送进度更新
-                fullText += processedContent;
-                /*
-                if (typeof onProgress === 'function') {
-                  onProgress(processedContent);
-                }
-                */
-                // 发送消息增量更新，使用message专用ID
-                switchRunStepType('message_creation');
-                this.sendMessageDelta(messageStepId, processedContent);
-              }
+              
+              // 更新全文
+              fullText += content;
               
               this.conversationId = data.conversation_id || this.conversationId;
               
@@ -498,21 +517,8 @@ class DifyClient extends BaseClient {
               await sleep(this.streamRate);
             } 
             else if (data.event === 'message_end') {
-              // 如果消息结束但仍在收集思考内容，确保关闭思考
-              if (collectingThinking) {
-                collectingThinking = false;
-                if (hasSentThinkStart) {
-                  // 发送思考结束标记
-                  this.sendReasoningDelta(reasoningStepId, '\n:::\n');
-                  // 添加分隔符到最终文本
-                  fullText += '\n:::\n';
-                }
-              }
-              
               this.conversationId = data.conversation_id || this.conversationId;
               this.metadata = data.metadata || {};
-              
-              // 确保最终文本中没有未处理的标签
               fullText = this.cleanDetailsAndSummaryTags(fullText);
             }
             else if (data.event === 'error') {
@@ -624,36 +630,38 @@ class DifyClient extends BaseClient {
   }
   
   /**
-   * 从内容中移除<details>标签
-   * @param {string} content - 包含<details>标签的内容
-   * @returns {string} 不含<details>标签的内容
-   */
-  removeDetailsTag(content) {
-    // 移除整个<details>...</details>块
-    return content.replace(/<details[^>]*>[\s\S]*?<\/details>/g, '');
-  }
-
-  /**
-   * 从内容中移除<details>和<summary>标签，但保留内部内容
-   * @param {string} content - 包含<details>和<summary>标签的内容
-   * @returns {string} 移除标签但保留内容的文本
+   * 处理消息内容，将Final Answer标记之前的内容作为思考部分
+   * @param {string} content - 包含思考内容和回答的文本
+   * @returns {string} 格式化后的文本，带有:::thinking:::标记
    */
   cleanDetailsAndSummaryTags(content) {
     if (!content) return '';
+
+    // 清理多余空行
+    content = content.replace(/\n{3,}/g, '\n\n');
     
-    // 首先移除<summary>...</summary>块，处理各种属性情况
-    let result = content.replace(/<summary[^>]*>[\s\S]*?<\/summary>/gi, '');
+    // 查找Final Answer标记
+    const finalAnswerIndex = content.indexOf(finalAnswerMarker);
     
-    // 移除<details>开始标签，处理各种属性情况
-    result = result.replace(/<details[^>]*>/gi, '');
+    // 如果没有找到标记，直接返回原内容
+    if (finalAnswerIndex === -1) {
+      return content;
+    }
     
-    // 移除</details>结束标签
-    result = result.replace(/<\/details>/gi, '');
+    // 将标记之前的内容作为思考部分
+    const thinkingContent = content.substring(0, finalAnswerIndex).trim();
     
-    // 清理可能的多余空行
-    result = result.replace(/\n{3,}/g, '\n\n');
+    // 将标记之后的内容作为正文（移除标记本身）
+    const regularContent = content.substring(finalAnswerIndex + finalAnswerMarker.length).trim();
     
-    return result;
+    // 如果思考内容不为空，格式化为思考区域
+    if (thinkingContent) {
+      // 构建最终结果，使用:::thinking:::格式
+      return `:::thinking\n${thinkingContent}\n:::\n\n${regularContent}`;
+    }
+    
+    // 如果没有思考内容，只返回正文
+    return regularContent;
   }
 
   checkVisionRequest(files) {
@@ -743,6 +751,46 @@ class DifyClient extends BaseClient {
     sendEvent(this.res, agentUpdateEvent);
     
     return statusText;
+  }
+
+  // 添加新的sendToolCallDelta方法
+  sendToolCallDelta(stepId, tool, toolInput, observation, progress = 0.5, toolCallId = null) {
+    if (!this.res) return;
+    
+    const id = toolCallId || `tool_${v4()}`; // 使用传入的ID或生成新ID
+    
+    const toolCallEvent = {
+      event: 'on_message_delta',
+      data: {
+        id: stepId,
+        delta: {
+          content: [
+            {
+              type: 'tool_call',
+              tool_call: {
+                id: id,
+                name: tool,
+                args: toolInput || '',
+                output: observation || '',
+                progress: progress
+              }
+            }
+          ]
+        }
+      }
+    };
+    
+    sendEvent(this.res, toolCallEvent);
+    
+    // 将工具调用记录到对象中
+    this.toolCalls[id] = {
+      name: tool,
+      args: toolInput || '',
+      output: observation || '',
+      progress: progress
+    };
+    
+    return id;
   }
 }
 

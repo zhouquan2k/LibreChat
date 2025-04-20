@@ -148,8 +148,22 @@ const initializeClient = async ({ req, res, endpointOption }) => {
     ...endpointOption,
   };
   
+  // 使用用户的username作为doctor_code
+  if (req.user && req.user.username) {
+    clientOptions.username = req.user.username;
+    logger.debug('[Dify] 使用用户名作为doctor_code:', req.user.username);
+  } else {
+    logger.warn('[Dify] 未找到用户名，可能会导致Dify API调用失败');
+  }
+  
   // 创建Dify客户端
   const client = new DifyClient(apiKey, clientOptions);
+  
+  // 记录username状态
+  logger.debug('[Dify] username status:', { 
+    available: !!clientOptions.username,
+    username: clientOptions.username || 'not available'
+  });
   
   return {
     client,

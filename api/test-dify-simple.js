@@ -119,6 +119,7 @@ async function testDifyClientStream() {
   };
   
   // 创建模拟响应对象，用于接收流式数据
+  
   const res = {
     write: (data) => {
       // 解析接收的数据以便调试查看
@@ -159,7 +160,7 @@ async function testDifyClientStream() {
   try {
     console.log('开始发送流式请求...');
     // 使用sendStreamCompletion方法而不是sendCompletionStream
-    const result = await client.sendStreamCompletion('请用几句话描述一下春天的景色。', {
+    const result = await client.sendStreamCompletion('你好', {
       user: 'test_user'
     });
     

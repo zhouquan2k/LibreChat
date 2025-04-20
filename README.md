@@ -1,3 +1,11 @@
+frontend:
+npm run frontend:dev
+
+backend:
+using debuger
+
+
+
 <p align="center">
   <a href="https://librechat.ai">
     <img src="client/public/assets/logo.svg" height="256">

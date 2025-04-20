@@ -1,6 +1,6 @@
 const isDevelopment = import.meta.env.MODE === 'development';
 const isLoggerEnabled = import.meta.env.VITE_ENABLE_LOGGER === 'true';
-const loggerFilter = import.meta.env.VITE_LOGGER_FILTER || '';
+const loggerFilter = import.meta.env.VITE_LOGGER_FILTER || 'error,warn,important';
 
 type LogFunction = (...args: unknown[]) => void;
 

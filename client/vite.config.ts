@@ -9,7 +9,7 @@ import type { Plugin } from 'vite';
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
-    host: 'localhost',
+    host: '0.0.0.0',
     port: 3090,
     strictPort: false,
     proxy: {
@@ -91,7 +91,7 @@ export default defineConfig({
   ],
   publicDir: './public',
   build: {
-    sourcemap: process.env.NODE_ENV === 'development',
+    sourcemap: true,
     outDir: './dist',
     minify: 'terser',
     rollupOptions: {
