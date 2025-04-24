@@ -41,6 +41,8 @@ class BaseClient {
     this.user;
     /** @type {string} */
     this.conversationId;
+
+    this.serverSideConversationId = false;
     /** @type {string} */
     this.responseMessageId;
     /** @type {TAttachment[]} */
@@ -188,7 +190,7 @@ class BaseClient {
     this.user = user;
     const saveOptions = this.getSaveOptions();
     this.abortController = opts.abortController ?? new AbortController();
-    const conversationId = overrideConvoId ?? opts.conversationId ?? crypto.randomUUID();
+    const conversationId = this.serverSideConversationId ? null : (overrideConvoId ?? opts.conversationId ?? crypto.randomUUID());
     const parentMessageId = opts.parentMessageId ?? Constants.NO_PARENT;
     const userMessageId =
       overrideUserMessageId ?? opts.overrideParentMessageId ?? crypto.randomUUID();
@@ -682,6 +684,9 @@ class BaseClient {
       responseMessage.content = completion;
     } else if (Array.isArray(completion)) {
       responseMessage.text = addSpaceIfNeeded(generation) + completion.join('');
+    } else if (typeof completion === 'object' && completion.text) {
+      responseMessage.text = addSpaceIfNeeded(generation) + completion.text;
+      responseMessage.conversationId = completion.conversationId;
     }
 
     if (

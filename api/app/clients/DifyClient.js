@@ -27,6 +27,7 @@ class DifyClient extends BaseClient {
     this.user = options.user || null;
     this.req = options.req || null;
     this.toolCalls = new Map(); // 跟踪所有工具调用
+    this.serverSideConversationId = true;
   }
 
   setOptions(options) {
@@ -236,6 +237,11 @@ class DifyClient extends BaseClient {
       user: opts.user || this.user || this.req?.user?.id || 'librechat_user',
       inputs: opts.inputs || {},
     };
+    
+    // 添加conversationId（如果存在）
+    if (opts.conversationId) {
+      payload.conversation_id = opts.conversationId;
+    }
     
     // 优先使用：
     // 1. 从选项中传入的username
@@ -533,11 +539,11 @@ class DifyClient extends BaseClient {
         }
       }
       
-      return fullText;
+      return {text: fullText, conversationId: this.conversationId};
     } catch (error) {
       if (error.name === 'AbortError' || this.abortController.signal.aborted) {
         logger.debug('[DifyClient] 请求被中止');
-        return fullText;
+        return {text: fullText, conversationId: this.conversationId};
       }
       
       logger.error('[DifyClient] 流式请求失败:', error);
@@ -631,8 +637,9 @@ class DifyClient extends BaseClient {
   
   /**
    * 处理消息内容，将Final Answer标记之前的内容作为思考部分
+   * 同时移除HTML中的summary标签及details标签，但保留details内的文本内容
    * @param {string} content - 包含思考内容和回答的文本
-   * @returns {string} 格式化后的文本，带有:::thinking:::标记
+   * @returns {string} 格式化后的文本
    */
   cleanDetailsAndSummaryTags(content) {
     if (!content) return '';
@@ -640,10 +647,19 @@ class DifyClient extends BaseClient {
     // 清理多余空行
     content = content.replace(/\n{3,}/g, '\n\n');
     
+    // 移除所有<summary>标签及其内容
+    content = content.replace(/<summary>([\s\S]*?)<\/summary>/g, '');
+    
+    // 替换<details>标签，只保留其内容
+    content = content.replace(/<details[^>]*>([\s\S]*?)<\/details>/g, function(match, innerContent) {
+      // 返回details标签内的内容，但不包括标签本身
+      return innerContent.trim();
+    });
+    
     // 查找Final Answer标记
     const finalAnswerIndex = content.indexOf(finalAnswerMarker);
     
-    // 如果没有找到标记，直接返回原内容
+    // 如果没有找到标记，直接返回处理后的内容
     if (finalAnswerIndex === -1) {
       return content;
     }
