@@ -1,5 +1,6 @@
 frontend:
 npm run frontend:dev
+http://localhost:3090
 
 backend:
 using debuger

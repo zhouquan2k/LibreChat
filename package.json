@@ -70,7 +70,10 @@
     "b:test:api": "cd api && bun run b:test",
     "b:balance": "bun config/add-balance.js",
     "b:list-balances": "bun config/list-balances.js",
-    "reset-terms": "node config/reset-terms.js"
+    "reset-terms": "node config/reset-terms.js",
+    "import-excel": "node import-excel-to-mongodb.js",
+    "check-import": "node check-mongodb-data.js",
+    "import:help": "echo '使用方法: npm run import-excel (导入Excel到MongoDB) | npm run check-import (检查导入的数据)'"
   },
   "repository": {
     "type": "git",
@@ -82,6 +85,10 @@
     "url": "https://github.com/danny-avila/LibreChat/issues"
   },
   "homepage": "https://librechat.ai/",
+  "dependencies": {
+    "mongodb": "^6.0.0",
+    "xlsx": "^0.18.5"
+  },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.1",
     "@eslint/compat": "^1.2.6",

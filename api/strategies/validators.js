@@ -29,7 +29,21 @@ const usernameSchema = z
   });
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z
+    .string()
+    .min(1, { message: 'Email or username is required' })
+    .max(120)
+    .refine((value) => {
+      // 检查是否为邮箱格式
+      const emailRegex = /\S+@\S+\.\S+/;
+      // 检查是否为有效的用户名格式
+      const isValidEmail = emailRegex.test(value);
+      const isValidUsername = allowedCharactersRegex.test(value) && !injectionPatternsRegex.test(value);
+      
+      return isValidEmail || isValidUsername;
+    }, {
+      message: 'Please enter a valid email address or username',
+    }),
   password: z
     .string()
     .min(8)

@@ -13,26 +13,38 @@ async function validateLoginRequest(req) {
   return error ? errorsToString(error.errors) : null;
 }
 
-async function passportLogin(req, email, password, done) {
+async function passportLogin(req, identifier, password, done) {
   try {
     const validationError = await validateLoginRequest(req);
     if (validationError) {
       logError('Passport Local Strategy - Validation Error', { reqBody: req.body });
-      logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
+      logger.error(`[Login] [Login failed] [Identifier: ${identifier}] [Request-IP: ${req.ip}]`);
       return done(null, false, { message: validationError });
     }
 
-    const user = await findUser({ email: email.trim() });
+    // 确定输入是邮箱还是用户名
+    const emailRegex = /\S+@\S+\.\S+/;
+    const isEmail = emailRegex.test(identifier.trim());
+    
+    let user;
+    if (isEmail) {
+      // 如果是邮箱格式，通过邮箱查找
+      user = await findUser({ email: identifier.trim() });
+    } else {
+      // 如果是用户名格式，通过用户名查找
+      user = await findUser({ username: identifier.trim() });
+    }
+
     if (!user) {
-      logError('Passport Local Strategy - User Not Found', { email });
-      logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
-      return done(null, false, { message: 'Email does not exist.' });
+      logError('Passport Local Strategy - User Not Found', { identifier, isEmail });
+      logger.error(`[Login] [Login failed] [Identifier: ${identifier}] [Request-IP: ${req.ip}]`);
+      return done(null, false, { message: isEmail ? 'Email does not exist.' : 'Username does not exist.' });
     }
 
     const isMatch = await comparePassword(user, password);
     if (!isMatch) {
       logError('Passport Local Strategy - Password does not match', { isMatch });
-      logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
+      logger.error(`[Login] [Login failed] [Identifier: ${identifier}] [Request-IP: ${req.ip}]`);
       return done(null, false, { message: 'Incorrect password.' });
     }
 
@@ -54,12 +66,12 @@ async function passportLogin(req, email, password, done) {
     }
 
     if (!user.emailVerified && !unverifiedAllowed) {
-      logError('Passport Local Strategy - Email not verified', { email });
-      logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
+      logError('Passport Local Strategy - Email not verified', { identifier });
+      logger.error(`[Login] [Login failed] [Identifier: ${identifier}] [Request-IP: ${req.ip}]`);
       return done(null, user, { message: 'Email not verified.' });
     }
 
-    logger.info(`[Login] [Login successful] [Username: ${email}] [Request-IP: ${req.ip}]`);
+    logger.info(`[Login] [Login successful] [Identifier: ${identifier}] [Request-IP: ${req.ip}]`);
     return done(null, user);
   } catch (err) {
     return done(err);

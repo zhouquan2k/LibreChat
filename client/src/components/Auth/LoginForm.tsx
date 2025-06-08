@@ -85,14 +85,14 @@ const LoginForm: React.FC<TLoginFormProps> = ({ onSubmit, startupConfig, error, 
             <input
               type="text"
               id="email"
-              autoComplete={useUsernameLogin ? 'username' : 'email'}
-              aria-label={localize('com_auth_email')}
+              autoComplete="username"
+              aria-label={localize('com_auth_email_or_username')}
               {...register('email', {
-                required: localize('com_auth_email_required'),
+                required: localize('com_auth_email_or_username_required'),
                 maxLength: { value: 120, message: localize('com_auth_email_max_length') },
                 pattern: {
-                  value: useUsernameLogin ? /\S+/ : /\S+@\S+\.\S+/,
-                  message: localize('com_auth_email_pattern'),
+                  value: /^(?:\S+@\S+\.\S+|\S{2,})$/,
+                  message: localize('com_auth_email_or_username_pattern'),
                 },
               })}
               aria-invalid={!!errors.email}
@@ -111,9 +111,7 @@ const LoginForm: React.FC<TLoginFormProps> = ({ onSubmit, startupConfig, error, 
                 rtl:peer-focus:left-auto rtl:peer-focus:translate-x-1/4
                 "
             >
-              {useUsernameLogin
-                ? localize('com_auth_username').replace(/ \(.*$/, '')
-                : localize('com_auth_email_address')}
+              {localize('com_auth_email_or_username')}
             </label>
           </div>
           {renderError('email')}

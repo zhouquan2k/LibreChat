@@ -5,7 +5,7 @@ const {
   processMCPEnv,
   getConfigDefaults,
 } = require('librechat-data-provider');
-const { checkVariables, checkHealth, checkConfig, checkAzureVariables } = require('./start/checks');
+const { checkVariables, checkHealth, checkConfig, checkAzureVariables, ensureUsernameIndex } = require('./start/checks');
 const { azureAssistantsDefaults, assistantsConfigSetup } = require('./start/assistants');
 const { initializeAzureBlobService } = require('./Files/Azure/initialize');
 const { initializeFirebase } = require('./Files/Firebase/initialize');
@@ -49,6 +49,7 @@ const AppService = async (app) => {
 
   checkVariables();
   await checkHealth();
+  await ensureUsernameIndex();
 
   if (fileStrategy === FileSources.firebase) {
     initializeFirebase();

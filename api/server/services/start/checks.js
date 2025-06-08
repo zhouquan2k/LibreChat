@@ -131,4 +131,40 @@ function checkPasswordReset() {
   }
 }
 
-module.exports = { checkVariables, checkHealth, checkConfig, checkAzureVariables };
+async function ensureUsernameIndex() {
+  try {
+    const { User } = require('~/models');
+    const indexes = await User.collection.getIndexes();
+    
+    // 检查是否存在用户名索引
+    const hasUsernameIndex = Object.keys(indexes).some(indexName => 
+      indexes[indexName].some(field => field[0] === 'username')
+    );
+    
+    if (!hasUsernameIndex) {
+      logger.info('[ensureUsernameIndex] Creating username index...');
+      await User.collection.createIndex(
+        { username: 1 }, 
+        { 
+          unique: true, 
+          sparse: true,
+          partialFilterExpression: { username: { $ne: '' } }
+        }
+      );
+      logger.info('[ensureUsernameIndex] Username index created successfully');
+    } else {
+      logger.debug('[ensureUsernameIndex] Username index already exists');
+    }
+  } catch (error) {
+    logger.error('[ensureUsernameIndex] Error ensuring username index:', error);
+    // 不抛出错误，因为这不应该阻止应用程序启动
+  }
+}
+
+module.exports = { 
+  checkVariables, 
+  checkHealth, 
+  checkConfig, 
+  checkAzureVariables, 
+  ensureUsernameIndex 
+};

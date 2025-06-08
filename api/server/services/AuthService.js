@@ -192,6 +192,19 @@ const registerUser = async (user, additionalData = {}) => {
       return { status: 200, message: genericVerificationMessage };
     }
 
+    // 检查用户名是否已存在（如果提供了用户名）
+    if (username && username.trim()) {
+      const existingUserByUsername = await findUser({ username: username.trim().toLowerCase() }, 'username _id');
+      if (existingUserByUsername) {
+        logger.info(
+          'Register User - Username in use',
+          { name: 'Request params:', value: user },
+          { name: 'Existing user:', value: existingUserByUsername },
+        );
+        return { status: 409, message: 'Username already exists. Please choose a different username.' };
+      }
+    }
+
     if (!(await isEmailDomainAllowed(email))) {
       const errorMessage =
         'The email address provided cannot be used. Please use a different email address.';
@@ -206,7 +219,7 @@ const registerUser = async (user, additionalData = {}) => {
     const newUserData = {
       provider: 'local',
       email,
-      username,
+      username: username && username.trim() ? username.trim() : undefined,
       name,
       avatar: null,
       role: isFirstRegisteredUser ? SystemRoles.ADMIN : SystemRoles.USER,
