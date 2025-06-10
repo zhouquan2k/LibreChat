@@ -71,8 +71,7 @@
     "b:balance": "bun config/add-balance.js",
     "b:list-balances": "bun config/list-balances.js",
     "reset-terms": "node config/reset-terms.js",
-    "import-excel": "node import-excel-to-mongodb.js",
-    "check-import": "node check-mongodb-data.js",
+    "import-excel": "node config/import-excel-to-mongodb.js",
     "import:help": "echo '使用方法: npm run import-excel (导入Excel到MongoDB) | npm run check-import (检查导入的数据)'"
   },
   "repository": {
