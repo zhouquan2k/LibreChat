@@ -91,13 +91,17 @@ export default defineConfig({
   ],
   publicDir: './public',
   build: {
-    sourcemap: true,
+    sourcemap: false,
     outDir: './dist',
     minify: 'terser',
     rollupOptions: {
+      external: ['xlsx'],
       preserveEntrySignatures: 'strict',
       // external: ['uuid'],
       output: {
+        globals: {
+          xlsx: 'XLSX'
+        },
         manualChunks(id: string) {
           if (id.includes('node_modules')) {
             // Group Radix UI libraries together.
