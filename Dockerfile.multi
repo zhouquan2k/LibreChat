@@ -4,6 +4,12 @@
 # Base for all builds
 FROM node:20-alpine AS base-min
 WORKDIR /app
+
+ARG NODE_HEAP=2048               
+ENV NODE_OPTIONS="--max-old-space-size=${NODE_HEAP}"
+ENV VITE_SOURCEMAP=false         
+ENV VITE_FORCE_CPUS=1 
+
 RUN apk --no-cache add curl
 RUN npm config set fetch-retry-maxtimeout 600000 && \
     npm config set fetch-retries 5 && \
@@ -45,7 +51,6 @@ FROM base AS client-build
 WORKDIR /app/client
 COPY client ./
 COPY --from=data-provider-build /app/packages/data-provider/dist /app/packages/data-provider/dist
-ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 # API setup (including client dist)
