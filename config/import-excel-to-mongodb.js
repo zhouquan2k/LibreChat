@@ -22,12 +22,15 @@ const CONFIG = {
     dynamicFields: {
         role: 'USER',              // 用户角色
         provider: 'import',        // 创建来源
-        password: '123456',        // 默认密码
+        password: '$2a$10$7uRf0H1wYqbnRBtyPZP9ruUkNvWDv5RYqEzgqRwkTqmcnpEnnXRHW',        // 默认密码
     },
     // 动态字段生成器 - 基于现有数据生成新字段
     dynamicFieldGenerators: {
         // 生成唯一email地址
-        email: (doc) => `${doc.username}@import.local`,
+        email: (doc) => {
+            const username = doc.username || 'unknown';
+            return `${username}_${doc.name}_${doc.phone}@import.local`;
+        },
         
         // 生成显示名称（如果name为空）
         // displayName: (doc) => doc.name || doc.username,
