@@ -361,6 +361,12 @@ export type TResetPassword = {
   confirm_password?: string;
 };
 
+export type TChangePassword = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
 export type VerifyEmailResponse = { message: string };
 
 export type TVerifyEmail = {

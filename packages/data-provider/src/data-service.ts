@@ -162,6 +162,10 @@ export const resetPassword = (payload: t.TResetPassword) => {
   return request.post(endpoints.resetPassword(), payload);
 };
 
+export const changePassword = (payload: t.TChangePassword) => {
+  return request.post(endpoints.changePassword(), payload);
+};
+
 export const verifyEmail = (payload: t.TVerifyEmail): Promise<t.VerifyEmailResponse> => {
   return request.post(endpoints.verifyEmail(), payload);
 };

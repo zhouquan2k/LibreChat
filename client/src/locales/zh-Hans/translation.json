@@ -788,5 +788,14 @@
   "com_ui_zoom": "缩放",
   "com_user_message": "您",
   "com_warning_resubmit_unsupported": "此终端不支持重新提交AI消息",
-  "com_nav_release_notes": "版本更新说明"
+  "com_nav_release_notes": "版本更新说明",
+  "com_nav_change_password": "修改密码",
+  "com_nav_current_password": "当前密码",
+  "com_nav_new_password": "新密码",
+  "com_nav_confirm_password": "确认新密码",
+  "com_nav_current_password_required": "请输入当前密码",
+  "com_nav_new_password_required": "请输入新密码",
+  "com_nav_confirm_password_required": "请确认新密码",
+  "com_nav_password_changed_successfully": "密码修改成功",
+  "com_nav_changing_password": "正在修改密码..."
 }

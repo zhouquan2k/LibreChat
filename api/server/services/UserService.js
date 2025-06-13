@@ -2,6 +2,8 @@ const { ErrorTypes } = require('librechat-data-provider');
 const { encrypt, decrypt } = require('~/server/utils');
 const { updateUser, Key } = require('~/models');
 const { logger } = require('~/config');
+const bcrypt = require('bcryptjs');
+const User = require('~/models/User');
 
 /**
  * Updates the plugins for a user based on the action specified (install/uninstall).
@@ -170,6 +172,55 @@ const checkUserKeyExpiry = (expiresAt, endpoint) => {
   }
 };
 
+/**
+ * 修改用户密码
+ * 
+ * @param {string} userId - 用户ID
+ * @param {string} currentPassword - 当前密码
+ * @param {string} newPassword - 新密码
+ * @returns {Promise<{success: boolean, message: string}>} - 操作结果
+ */
+const changePassword = async (userId, currentPassword, newPassword) => {
+  try {
+    // 获取用户信息
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      logger.warn(`[changePassword] User not found. [ID: ${userId}]`);
+      return { success: false, message: '用户不存在' };
+    }
+
+    // 验证当前密码是否正确
+    const isMatch = bcrypt.compareSync(currentPassword, user.password);
+    if (!isMatch) {
+      logger.warn(`[changePassword] Current password incorrect. [ID: ${userId}]`);
+      return { success: false, message: '当前密码不正确' };
+    }
+
+    // 检查新密码是否与当前密码相同
+    const isSamePassword = bcrypt.compareSync(newPassword, user.password);
+    if (isSamePassword) {
+      logger.warn(`[changePassword] New password same as current. [ID: ${userId}]`);
+      return { success: false, message: '新密码不能与当前密码相同' };
+    }
+
+    // 哈希新密码
+    const hash = bcrypt.hashSync(newPassword, 10);
+    
+    // 更新密码并使所有其他会话失效（通过更新passwordVersion字段）
+    await updateUser(userId, { 
+      password: hash,
+      passwordVersion: Date.now() // 使其他会话失效
+    });
+
+    logger.info(`[changePassword] Password changed successfully. [ID: ${userId}]`);
+    return { success: true, message: '密码修改成功' };
+  } catch (error) {
+    logger.error('[changePassword]', error);
+    return { success: false, message: '修改密码时发生错误' };
+  }
+};
+
 module.exports = {
   getUserKey,
   updateUserKey,
@@ -178,4 +229,5 @@ module.exports = {
   getUserKeyExpiry,
   checkUserKeyExpiry,
   updateUserPluginsService,
+  changePassword,
 };

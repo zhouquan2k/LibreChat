@@ -10,7 +10,7 @@ const {
 } = require('~/models');
 const User = require('~/models/User');
 const { updateUserPluginAuth, deleteUserPluginAuth } = require('~/server/services/PluginService');
-const { updateUserPluginsService, deleteUserKey } = require('~/server/services/UserService');
+const { updateUserPluginsService, deleteUserKey, changePassword } = require('~/server/services/UserService');
 const { verifyEmail, resendVerificationEmail } = require('~/server/services/AuthService');
 const { processDeleteRequest } = require('~/server/services/Files/process');
 const { deleteAllSharedLinks } = require('~/models/Share');
@@ -164,6 +164,31 @@ const resendVerificationController = async (req, res) => {
   }
 };
 
+/**
+ * 处理用户修改密码请求
+ * 
+ * @param {Object} req - 请求对象
+ * @param {Object} res - 响应对象
+ * @returns {Promise<void>}
+ */
+const changePasswordController = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+    
+    const result = await changePassword(userId, currentPassword, newPassword);
+    
+    if (result.success) {
+      return res.status(200).json({ message: result.message });
+    } else {
+      return res.status(400).json({ message: result.message });
+    }
+  } catch (error) {
+    logger.error('[changePasswordController]', error);
+    return res.status(500).json({ message: '修改密码时发生错误' });
+  }
+};
+
 module.exports = {
   getUserController,
   getTermsStatusController,
@@ -172,4 +197,5 @@ module.exports = {
   verifyEmailController,
   updateUserPluginsController,
   resendVerificationController,
+  changePasswordController,
 };

@@ -13,6 +13,7 @@ const abortMiddleware = require('./abortMiddleware');
 const checkInviteUser = require('./checkInviteUser');
 const requireJwtAuth = require('./requireJwtAuth');
 const validateModel = require('./validateModel');
+const validateChangePassword = require('./validateChangePassword');
 const moderateText = require('./moderateText');
 const logHeaders = require('./logHeaders');
 const setHeaders = require('./setHeaders');
@@ -48,4 +49,5 @@ module.exports = {
   validateRegistration,
   validateImageRequest,
   validatePasswordReset,
+  validateChangePassword,
 };

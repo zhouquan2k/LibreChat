@@ -4,6 +4,7 @@ import DeleteAccount from './DeleteAccount';
 import Avatar from './Avatar';
 import EnableTwoFactorItem from './TwoFactorAuthentication';
 import BackupCodesItem from './BackupCodesItem';
+import ChangePassword from './ChangePassword';
 import { useAuthContext } from '~/hooks';
 
 function Account() {
@@ -19,6 +20,9 @@ function Account() {
       </div>
       {user?.user?.provider === 'local' && (
         <>
+          <div className="pb-3">
+            <ChangePassword />
+          </div>
           <div className="pb-3">
             <EnableTwoFactorItem />
           </div>

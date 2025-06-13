@@ -96,6 +96,8 @@ export const requestPasswordReset = () => '/api/auth/requestPasswordReset';
 
 export const resetPassword = () => '/api/auth/resetPassword';
 
+export const changePassword = () => '/api/user/change-password';
+
 export const verifyEmail = () => '/api/user/verify';
 
 export const resendVerificationEmail = () => '/api/user/verify/resend';
