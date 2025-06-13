@@ -18,7 +18,7 @@ function Account() {
       <div className="pb-3">
         <Avatar />
       </div>
-      {user?.user?.provider === 'local' && (
+      {(user?.user?.provider === 'local'|| user?.user?.provider === 'import') && (
         <>
           <div className="pb-3">
             <ChangePassword />
